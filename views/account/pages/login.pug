@@ -1,0 +1,36 @@
+extends ../layouts/account.pug
+
+block main
+  .form-account
+    h2.inner-title Đăng nhập
+    p.inner-desc Vui lòng nhập email và mật khẩu để tiếp tục
+
+    form.inner-form#login-form
+      .inner-group
+        label.inner-label(for="email") Email
+        input.inner-control(
+          type="email"
+          name="email"
+          id="email"
+        )
+      .inner-group
+        label.inner-label(for="password") Mật khẩu
+        input.inner-control(
+          type="password"
+          name="password"
+          id="password"
+        )
+      .inner-meta
+        .inner-confirm
+          input.inner-check(
+            type="checkbox"
+            name="rememberPassword"
+            id="remember-password"
+          )
+          label.inner-label(for="remember-password") Nhớ mật khẩu
+        a.inner-forgot-password(href="/forgot-password") Quên mật khẩu?
+      button.inner-button Đăng nhập
+
+    .inner-more
+      span Bạn chưa có tài khoản?
+      a(href="/register") Đăng ký

@@ -1,0 +1,34 @@
+extends ../layouts/account.pug
+
+block main
+  .form-account
+    h2.inner-title Đăng ký
+    p.inner-desc Vui lòng điền thông tin để tạo tài khoản
+
+    form.inner-form#register-form
+      .inner-group
+        label.inner-label(for="fullName") Họ tên
+        input.inner-control(
+          type="text"
+          name="fullName"
+          id="fullName"
+        )
+      .inner-group
+        label.inner-label(for="email") Email
+        input.inner-control(
+          type="email"
+          name="email"
+          id="email"
+        )
+      .inner-group
+        label.inner-label(for="password") Mật khẩu
+        input.inner-control(
+          type="password"
+          name="password"
+          id="password"
+        )
+      button.inner-button Đăng ký
+
+    .inner-more
+      span Bạn đã có tài khoản?
+      a(href="/login") Đăng nhập
