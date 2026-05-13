@@ -22,34 +22,6 @@
   const elProgressPct   = document.getElementById('progressPct');
   const elProgressFill  = document.getElementById('progressFill');
   const elBtnRow        = document.querySelector('.study-btn-row');
-  const elIntervalHard  = document.getElementById('intervalHard');
-  const elIntervalGood  = document.getElementById('intervalGood');
-  const elIntervalEasy  = document.getElementById('intervalEasy');
-
-  function formatInterval(days) {
-    if (!days || days <= 0) return '< 1 phút';
-    if (days === 1) return '1 ngày';
-    return days + ' ngày';
-  }
-
-  function updateIntervals(card) {
-    const sp = card.studyProgress || {};
-    const intervalDays = sp.interval_days || 0;
-    const easeFactor   = sp.ease_factor   || 2.5;
-    const repetitions  = sp.repetitions   || 0;
-
-    elIntervalHard.textContent = formatInterval(Math.round(intervalDays * 1.2) || 1);
-
-    let goodDays;
-    if (repetitions === 0) goodDays = 1;
-    else if (repetitions === 1) goodDays = 6;
-    else goodDays = Math.round(intervalDays * easeFactor);
-    elIntervalGood.textContent = formatInterval(goodDays);
-
-    const easyDays = Math.round(Math.max(intervalDays, 1) * 2);
-    elIntervalEasy.textContent = formatInterval(easyDays);
-  }
-
   function loadCard() {
     if (queue.length === 0) {
       updateProgress();
@@ -78,7 +50,6 @@
     document.querySelectorAll('.btn-rating').forEach(function (b) { b.classList.remove('selected'); });
     elHint.style.display = 'block';
 
-    updateIntervals(card);
     updateProgress();
   }
 

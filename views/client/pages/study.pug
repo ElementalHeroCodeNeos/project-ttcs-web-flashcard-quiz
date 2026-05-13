@@ -38,18 +38,10 @@ block main
     .rating-wrap#ratingWrap
       p.rating-label Bạn nhớ thẻ này như thế nào?
       .rating-buttons#ratingButtons
-        button.btn-rating.btn-again(type="button", data-rating="again")
-          | Again
-          span.rating-interval &lt; 1 phút
-        button.btn-rating.btn-hard(type="button", data-rating="hard")
-          | Hard
-          span.rating-interval#intervalHard 6 phút
-        button.btn-rating.btn-good(type="button", data-rating="good")
-          | Good
-          span.rating-interval#intervalGood 1 ngày
-        button.btn-rating.btn-easy(type="button", data-rating="easy")
-          | Easy
-          span.rating-interval#intervalEasy 4 ngày
+        button.btn-rating.btn-again(type="button", data-rating="again") Again
+        button.btn-rating.btn-hard(type="button", data-rating="hard") Hard
+        button.btn-rating.btn-good(type="button", data-rating="good") Good
+        button.btn-rating.btn-easy(type="button", data-rating="easy") Easy
 
     p.study-hint#studyHint
       | 💡 Mẹo: Hãy đoán nghĩa trước khi bấm&nbsp;
