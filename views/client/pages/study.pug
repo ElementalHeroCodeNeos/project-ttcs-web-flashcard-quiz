@@ -1,0 +1,62 @@
+extends ../layouts/default.pug
+
+block header
+  header.header
+    nav.study-nav
+      a.nav-logo(href="/") Flash#[span Learn]
+      a.btn-exit(href=`/deck/detail/${deck.id}`) Thoát
+
+block main
+  .study-container
+
+    .study-info-card
+      p.study-mode-label Chế độ học Flashcard
+      p.study-deck-title #{deck.title}
+      .progress-row
+        span.progress-label#progressLabel Thẻ 0 / #{cards.length}
+        span.progress-pct#progressPct 0%
+      .progress-bar
+        .progress-fill#progressFill(style="width:0%")
+
+    .flashcard-wrap#flashcardWrap
+      p.flashcard-side-label#sideLabel Mặt trước
+      .flashcard-body
+        .card-front#frontContent
+          p.card-main#cardFront
+        .card-back#backContent
+          p.card-main#cardBack
+
+    .study-done#studyDone(style="display:none")
+      p.study-done-title 🎉 Hoàn thành!
+      p.study-done-desc Bạn đã ôn xong tất cả thẻ hôm nay.
+      a.btn-primary(href=`/deck/detail/${deck.id}`) Quay lại bộ thẻ
+
+    .study-btn-row
+      button.btn-flip#flipBtn(type="button") Lật thẻ
+      button.btn-next-card#nextBtn(type="button", disabled) Tiếp theo
+
+    .rating-wrap#ratingWrap
+      p.rating-label Bạn nhớ thẻ này như thế nào?
+      .rating-buttons#ratingButtons
+        button.btn-rating.btn-again(type="button", data-rating="again")
+          | Again
+          span.rating-interval &lt; 1 phút
+        button.btn-rating.btn-hard(type="button", data-rating="hard")
+          | Hard
+          span.rating-interval#intervalHard 6 phút
+        button.btn-rating.btn-good(type="button", data-rating="good")
+          | Good
+          span.rating-interval#intervalGood 1 ngày
+        button.btn-rating.btn-easy(type="button", data-rating="easy")
+          | Easy
+          span.rating-interval#intervalEasy 4 ngày
+
+    p.study-hint#studyHint
+      | 💡 Mẹo: Hãy đoán nghĩa trước khi bấm&nbsp;
+      strong Lật thẻ
+      |  để ghi nhớ tốt hơn.
+
+block scripts
+  script(type="application/json")#cardsData !{JSON.stringify(cards)}
+  script(src="/client/assets/js/study.js")
+  script document.body.classList.add('study-mode');

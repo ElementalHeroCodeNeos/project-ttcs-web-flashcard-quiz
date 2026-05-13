@@ -1,0 +1,56 @@
+extends ../layouts/default.pug
+
+block header
+  header.header
+    nav.study-nav
+      a.nav-logo(href="/") Flash#[span Learn]
+
+block main
+  - const isChoice = attempt.quiz_type === 'multiple_choice'
+  - const wrongItems = items.filter(i => !i.is_correct)
+  - const score = Math.round(attempt.correct_count / attempt.total_questions * 100)
+
+  .result-container
+
+    .result-hero
+      p.result-emoji 🎉
+      p.result-title #{isChoice ? 'Hoàn thành trắc nghiệm!' : 'Hoàn thành ghép cặp!'}
+      p.result-deck #{deck.title}
+
+      .score-wrap
+        .score-main
+          p.score-num #{score}%
+          p.score-label Điểm số
+        .score-divider
+        .score-stats
+          .score-stat
+            p.score-stat-num.correct-num #{attempt.correct_count}
+            p.score-stat-label #{isChoice ? 'Câu đúng' : 'Cặp đúng'}
+          .score-stat
+            p.score-stat-num.wrong-num #{attempt.total_questions - attempt.correct_count}
+            p.score-stat-label #{isChoice ? 'Câu sai' : 'Cặp sai'}
+          .score-stat
+            p.score-stat-num #{attempt.total_questions}
+            p.score-stat-label #{isChoice ? 'Tổng câu' : 'Tổng cặp'}
+
+      .result-actions
+        a.btn-retry(href=isChoice ? `/deck/quiz/choice/${deck.id}` : `/deck/quiz/match/${deck.id}`) 🔄 Làm lại
+        a.btn-back-result(href=`/deck/detail/${deck.id}`) ← Quay lại bộ thẻ
+
+    if wrongItems.length
+      .wrong-section
+        .wrong-header
+          p.wrong-title #{isChoice ? 'Câu trả lời sai' : 'Cặp ghép sai'}
+          span.wrong-count #{wrongItems.length} #{isChoice ? 'câu' : 'cặp'}
+        .wrong-col-header
+          .wrong-col-label #{isChoice ? 'Câu hỏi' : 'Mặt trước'}
+          .wrong-col-label Bạn chọn
+          .wrong-col-label Đáp án đúng
+        each item in wrongItems
+          .wrong-row
+            .wrong-cell.question #{item.question_text}
+            .wrong-cell.user-ans ✗ #{item.user_answer || '(bỏ qua)'}
+            .wrong-cell.correct-ans ✓ #{item.correct_answer}
+
+block scripts
+  script document.body.classList.add('study-mode');

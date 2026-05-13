@@ -1,0 +1,158 @@
+extends ../layouts/default.pug
+
+block main
+  - const isOwner  = deck.owner_id == locals.user.id
+  - const colorIdx = deck.category_id % 8
+
+  .detail-container
+
+    .deck-info
+      .deck-info-accent(class=`cat-${colorIdx}`)
+      .deck-info-top
+        .deck-info-left
+          .deck-badges
+            span.badge(class=`cat-${colorIdx}`) #{deck.category ? deck.category.name : 'Chung'}
+            if deck.visibility === 'public'
+              span.status-badge.status-public
+                i.fa-solid.fa-globe.icon-globe
+                |  Công khai
+            else
+              span.status-badge.status-private
+                i.fa-solid.fa-lock.icon-lock
+                |  Riêng tư
+          .deck-title #{deck.title}
+          if deck.description
+            .deck-desc #{deck.description}
+          .deck-stat
+            strong #{deck.cardCount || 0}
+            |  thẻ
+        if isOwner
+          .deck-info-right
+            button.btn-toggle(data-id=deck.id, data-visibility=deck.visibility)
+              if deck.visibility === 'public'
+                i.fa-solid.fa-lock
+                |  Đặt riêng tư
+              else
+                i.fa-solid.fa-globe
+                |  Công khai bộ thẻ
+      .deck-actions
+        a.btn-action.btn-study(href=`/deck/study/${deck.id}`)
+          i.fa-solid.fa-bolt
+          |  Học thẻ
+        a.btn-action.btn-choice(href=`/deck/quiz/choice/${deck.id}`)
+          i.fa-solid.fa-pen-to-square
+          |  Trắc nghiệm
+        a.btn-action.btn-match(href=`/deck/quiz/match/${deck.id}`)
+          i.fa-solid.fa-gamepad
+          |  Quiz ghép cặp
+
+    if isOwner
+      .add-card-section
+        .section-title Thêm thẻ mới
+        form.add-card-form(method="POST", action=`/deck/${deck.id}/card`)
+          .add-card-input-wrap
+            label.add-card-label Mặt trước
+            input.add-card-input(type="text", name="front", placeholder="VD: abandon")
+          .add-card-input-wrap
+            label.add-card-label Mặt sau
+            input.add-card-input(type="text", name="back", placeholder="VD: từ bỏ")
+          button.btn-add(type="submit")
+            i.fa-solid.fa-plus
+            |  Thêm thẻ
+
+    .card-list-section
+      .card-list-header
+        .section-title Danh sách thẻ
+        .card-count
+          strong #{deck.cardCount || 0}
+          |  thẻ
+      .card-col-header
+        .card-col-label Mặt trước
+        .card-col-label Mặt sau
+        .card-col-label.last
+      if cards && cards.length
+        each card in cards
+          .card-row(id=`row-${card.id}`)
+            .card-cell.front(id=`front-${card.id}`) #{card.front}
+            .card-cell.back(id=`back-${card.id}`) #{card.back}
+            .card-cell.actions
+              if isOwner
+                button.btn-icon(onclick=`editRow(${card.id})`, title="Sửa")
+                  i.fa-solid.fa-pen
+                button.btn-icon.danger(onclick=`showDelete(${card.id})`, title="Xóa")
+                  i.fa-solid.fa-trash
+      else
+        p.no-cards Chưa có thẻ nào. Hãy thêm thẻ đầu tiên!
+
+    .detail-back-wrap
+      a.btn-back-bottom(href="/deck")
+        i.fa-solid.fa-arrow-left
+        |  Quay lại danh sách
+
+  if isOwner
+    .dialog-overlay#deleteDialog
+      .dialog
+        .dialog-title Xóa thẻ này?
+        .dialog-desc Thẻ sẽ bị xóa vĩnh viễn và không thể khôi phục. Tiến độ học của thẻ này cũng sẽ mất.
+        .dialog-actions
+          button.btn-cancel(onclick="hideDelete()") Hủy
+          button.btn-delete(onclick="confirmDelete()") Xóa
+
+block scripts
+  if isOwner
+    script.
+      let deleteTarget = null;
+
+      function editRow(id) {
+        const row = document.getElementById('row-' + id);
+        const frontCell = document.getElementById('front-' + id);
+        const backCell  = document.getElementById('back-'  + id);
+        row.dataset.origFront = frontCell.textContent.trim();
+        row.dataset.origBack  = backCell.textContent.trim();
+        row.classList.add('editing');
+        frontCell.innerHTML = `<input class="inline-input" value="${row.dataset.origFront}" id="edit-front-${id}"/>`;
+        backCell.innerHTML  = `<input class="inline-input" value="${row.dataset.origBack}"  id="edit-back-${id}"/>`;
+        row.querySelector('.actions').innerHTML = `
+          <button class="btn-icon save" onclick="saveRow(${id})" title="Lưu"><i class="fa-solid fa-check"></i></button>
+          <button class="btn-icon"      onclick="cancelEdit(${id})" title="Hủy"><i class="fa-solid fa-xmark"></i></button>
+        `;
+        document.getElementById('edit-front-' + id).focus();
+      }
+
+      function saveRow(id) {
+        const row = document.getElementById('row-' + id);
+        row.classList.remove('editing');
+        document.getElementById('front-' + id).textContent = document.getElementById('edit-front-' + id).value;
+        document.getElementById('back-'  + id).textContent = document.getElementById('edit-back-'  + id).value;
+        restoreActions(id);
+      }
+
+      function cancelEdit(id) {
+        const row = document.getElementById('row-' + id);
+        row.classList.remove('editing');
+        document.getElementById('front-' + id).textContent = row.dataset.origFront;
+        document.getElementById('back-'  + id).textContent = row.dataset.origBack;
+        restoreActions(id);
+      }
+
+      function restoreActions(id) {
+        document.querySelector('#row-' + id + ' .actions').innerHTML = `
+          <button class="btn-icon" onclick="editRow(${id})" title="Sửa"><i class="fa-solid fa-pen"></i></button>
+          <button class="btn-icon danger" onclick="showDelete(${id})" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+        `;
+      }
+
+      function showDelete(id) {
+        deleteTarget = id;
+        document.getElementById('deleteDialog').classList.add('show');
+      }
+
+      function hideDelete() {
+        deleteTarget = null;
+        document.getElementById('deleteDialog').classList.remove('show');
+      }
+
+      function confirmDelete() {
+        if (deleteTarget) document.getElementById('row-' + deleteTarget).remove();
+        hideDelete();
+      }

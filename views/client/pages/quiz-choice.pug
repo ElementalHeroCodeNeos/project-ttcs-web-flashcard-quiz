@@ -1,0 +1,35 @@
+extends ../layouts/default.pug
+
+block header
+  header.header
+    nav.study-nav
+      a.nav-logo(href="/") Flash#[span Learn]
+      a.btn-exit(href=`/deck/detail/${deck.id}`) Thoát
+
+block main
+  .study-container
+
+    .study-info-card
+      p.study-mode-label Chế độ trắc nghiệm
+      p.study-deck-title #{deck.title}
+      .progress-row
+        span.progress-label#progressLabel Câu 1 / #{questions.length}
+        span.progress-pct#progressPct 0%
+      .progress-bar
+        .progress-fill#progressFill(style="width:0%")
+
+    .question-card
+      p.question-label#questionLabel Câu hỏi
+      p.question-text#questionText
+      hr.question-divider
+      .choices#choicesWrap
+
+    .quiz-feedback#quizFeedback
+
+    button.btn-quiz-next#nextBtn(type="button") Câu tiếp theo →
+
+block scripts
+  input#deckId(type="hidden", value=deck.id)
+  script(type="application/json")#questionsData !{JSON.stringify(questions)}
+  script(src="/client/assets/js/quiz-choice.js")
+  script document.body.classList.add('study-mode');

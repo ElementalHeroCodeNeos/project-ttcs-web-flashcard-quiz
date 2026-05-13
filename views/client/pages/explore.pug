@@ -1,0 +1,73 @@
+extends ../layouts/default.pug
+
+block main
+  .explore-container
+
+    .explore-hero
+      p.explore-hero-title 🌐 Khám phá bộ thẻ cộng đồng
+      p.explore-hero-desc Tìm kiếm và lưu về hàng nghìn bộ thẻ được chia sẻ bởi cộng đồng người học.
+
+    form.filter-bar(method="GET" action="/explore")
+      .search-wrap
+        span.search-icon 🔍
+        input.search-input(type="text" name="keyword" value=keyword placeholder="Tìm theo tên bộ thẻ...")
+      .filter-divider
+      select.filter-select(name="category_id")
+        option(value="") Danh mục
+        each cat in categories
+          option(value=cat.id selected=(String(cat.id) === String(currentCategory))) #{cat.name}
+      .filter-divider
+      a.btn-clear(href="/explore") ✕ Xóa bộ lọc
+
+    p.results-info Tìm thấy #[strong #{total}] bộ thẻ
+
+    .explore-grid
+      each deck in decks
+        - const colorIdx = deck.category_id % 8
+        - const initial = deck.author_name ? deck.author_name.charAt(0).toUpperCase() : '?'
+        .explore-card
+          .deck-accent(class='cat-' + colorIdx)
+          .explore-card-top
+            span.badge(class='cat-' + colorIdx) #{deck.category_name}
+          p.deck-name #{deck.title}
+          p.deck-desc #{deck.description}
+          .deck-meta
+            .deck-author
+              .author-avatar #{initial}
+              span #{deck.author_name}
+            span 📇 #{deck.card_count} thẻ
+          .explore-card-actions
+            a.btn-explore-detail(href=`/explore/${deck.id}`) Xem
+            button.btn-explore-save(
+              type="button"
+              data-deck-id=`${deck.id}`
+              class=deck.is_saved ? 'saved' : ''
+            ) #{deck.is_saved ? '✓ Đã lưu' : '💾 Lưu về thư viện'}
+
+    - const totalPages = Math.ceil(total / limit)
+    if totalPages > 1
+      .pagination
+        if page > 1
+          a.page-btn(href=`/explore?page=${page - 1}&keyword=${keyword}&category_id=${currentCategory || ''}`) ←
+        else
+          span.page-btn.disabled ←
+        - const pageRange = Array.from({length: totalPages}, (_, i) => i + 1)
+        each p in pageRange
+          a.page-btn(href=`/explore?page=${p}&keyword=${keyword}&category_id=${currentCategory || ''}` class=p === page ? 'active' : '') #{p}
+        if page < totalPages
+          a.page-btn(href=`/explore?page=${page + 1}&keyword=${keyword}&category_id=${currentCategory || ''}`) →
+        else
+          span.page-btn.disabled →
+
+block scripts
+  script.
+    document.querySelectorAll('.btn-explore-save').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (btn.classList.contains('saved')) return;
+        fetch('/deck/' + btn.dataset.deckId + '/save', { method: 'POST' })
+          .then(function () {
+            btn.textContent = '✓ Đã lưu';
+            btn.classList.add('saved');
+          });
+      });
+    });

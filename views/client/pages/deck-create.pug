@@ -1,0 +1,92 @@
+extends ../layouts/default.pug
+
+block main
+  .form-container
+
+    .page-header
+      .page-title Tạo bộ thẻ mới
+
+    .form-card
+      form(method="POST", action="/deck/create")
+
+        .form-group
+          label.form-label
+            | Tên bộ thẻ
+            span.required *
+          input.form-input(
+            type="text"
+            name="title"
+            placeholder="VD: IELTS Vocabulary Band 7+"
+            value=oldData ? oldData.title : ''
+          )
+
+        .form-group
+          label.form-label Mô tả
+          textarea.form-textarea(
+            name="description"
+            placeholder="Mô tả ngắn về nội dung bộ thẻ..."
+          )= oldData ? oldData.description : ''
+
+        .form-group
+          label.form-label
+            | Danh mục
+            span.required *
+          select.form-select#categorySelect(name="category_id")
+            option(value="") — Chọn danh mục —
+            each cat in categories
+              option(value=cat.id, selected=oldData && oldData.category_id == cat.id) #{cat.name}
+          .category-preview-wrap
+            span#categoryBadge
+
+        hr.form-divider
+
+        .form-group
+          label.form-label Trạng thái
+          .radio-group
+            .radio-card(class=(!oldData || oldData.visibility === 'private') ? 'selected' : '')
+              input(type="radio", name="visibility", value="private", hidden, checked=!oldData || oldData.visibility === 'private')
+              .radio-dot
+                .radio-dot-inner
+              .radio-info
+                .radio-title 🔒 Riêng tư
+                .radio-desc Chỉ mình bạn xem và sử dụng
+            .radio-card(class=oldData && oldData.visibility === 'public' ? 'selected' : '')
+              input(type="radio", name="visibility", value="public", hidden, checked=oldData && oldData.visibility === 'public')
+              .radio-dot
+                .radio-dot-inner
+              .radio-info
+                .radio-title 🌐 Công khai
+                .radio-desc Mọi người có thể tìm kiếm và tải về
+
+        hr.form-divider
+
+        .form-actions
+          a.btn-secondary(href="/deck") Quay lại danh sách
+          button.btn-primary(type="submit")
+            i.fa-solid.fa-plus
+            |  Tạo mới
+
+block scripts
+  script.
+    const categorySelect = document.getElementById('categorySelect');
+    const categoryBadge  = document.getElementById('categoryBadge');
+
+    function updateBadge(val) {
+      if (!val) { categoryBadge.className = ''; categoryBadge.textContent = ''; return; }
+      const idx = parseInt(val) % 8;
+      const opt = categorySelect.querySelector('option[value="' + val + '"]');
+      categoryBadge.className = 'badge cat-' + idx;
+      categoryBadge.textContent = opt ? opt.textContent.trim() : '';
+    }
+
+    categorySelect.addEventListener('change', function() { updateBadge(this.value); });
+
+    document.querySelectorAll('.radio-card').forEach(function(card) {
+      card.addEventListener('click', function() {
+        card.closest('.radio-group').querySelectorAll('.radio-card').forEach(function(c) { c.classList.remove('selected'); });
+        card.classList.add('selected');
+        card.querySelector('input[type="radio"]').checked = true;
+      });
+    });
+
+    if (categorySelect.value) updateBadge(categorySelect.value);

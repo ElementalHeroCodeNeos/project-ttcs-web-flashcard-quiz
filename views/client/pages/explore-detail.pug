@@ -1,0 +1,52 @@
+extends ../layouts/default.pug
+
+block main
+  .explore-detail-container
+
+    - const colorIdx = deck.category_id % 8
+    - const initial = deck.author_name ? deck.author_name.charAt(0).toUpperCase() : '?'
+
+    .explore-deck-info
+      .explore-deck-info-accent(class='cat-' + colorIdx)
+      .explore-deck-badges
+        span.badge(class='cat-' + colorIdx) #{deck.category_name}
+        span.explore-public-badge 🌐 Công khai
+      p.explore-deck-title #{deck.title}
+      p.explore-deck-desc #{deck.description}
+      .explore-deck-meta
+        .explore-deck-author
+          .author-avatar #{initial}
+          span #{deck.author_name}
+        span 📇 #[strong #{deck.card_count}] thẻ
+
+    .explore-card-list
+      .explore-list-header
+        p.section-title Danh sách thẻ
+        p.section-count #[strong #{deck.card_count}] thẻ
+      .explore-col-header
+        p.explore-col-label Mặt trước
+        p.explore-col-label Mặt sau
+      each card in cards
+        .explore-card-row
+          .explore-card-cell.front #{card.front}
+          .explore-card-cell.back #{card.back}
+
+    .explore-bottom-action
+      button.btn-explore-save-main#saveBtnMain(
+        type="button"
+        data-deck-id=`${deck.id}`
+        class=deck.is_saved ? 'saved' : ''
+      ) #{deck.is_saved ? '✓ Đã lưu về thư viện' : '💾 Lưu về thư viện'}
+
+block scripts
+  script.
+    var btn = document.getElementById('saveBtnMain');
+    if (btn && !btn.classList.contains('saved')) {
+      btn.addEventListener('click', function () {
+        fetch('/deck/' + btn.dataset.deckId + '/save', { method: 'POST' })
+          .then(function () {
+            btn.textContent = '✓ Đã lưu về thư viện';
+            btn.classList.add('saved');
+          });
+      });
+    }

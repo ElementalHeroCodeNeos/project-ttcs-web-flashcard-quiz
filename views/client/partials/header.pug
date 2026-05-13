@@ -1,0 +1,28 @@
+header.header
+  nav.nav
+    a.nav-logo(href="/") Flash#[span Learn]
+
+    if locals.user
+      .nav-links
+        a.nav-link(href="/dashboard", class={'active': locals.currentPage === 'dashboard'}) Trang chủ
+        a.nav-link(href="/deck", class={'active': locals.currentPage === 'deck'}) Bộ thẻ
+        a.nav-link(href="/explore", class={'active': locals.currentPage === 'explore'}) Khám phá
+      .nav-user
+        .avatar-btn
+          if locals.user.avatar_url
+            img.avatar-img-sm(src=locals.user.avatar_url, alt=locals.user.full_name)
+          else
+            .avatar #{(locals.user.full_name || '?').charAt(0).toUpperCase()}
+          span.avatar-name #{locals.user.full_name || ''}
+          i.fa-solid.fa-chevron-down.avatar-caret
+        .nav-dropdown
+          a.dropdown-item(href="/profile")
+            i.fa-regular.fa-user.icon-user
+            |  Hồ sơ
+          a.dropdown-item(href="/logout")
+            i.fa-solid.fa-right-from-bracket.icon-logout
+            |  Đăng xuất
+    else
+      .nav-right
+        a.btn-login(href="/login") Đăng nhập
+        a.btn-register(href="/register") Đăng ký miễn phí

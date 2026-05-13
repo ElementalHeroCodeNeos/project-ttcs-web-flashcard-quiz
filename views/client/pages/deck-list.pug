@@ -1,0 +1,87 @@
+extends ../layouts/default.pug
+
+block main
+  .db-container
+
+    .page-header
+      .page-title
+        | Bộ thẻ của tôi
+        span #{total} bộ thẻ
+      a.btn-primary(href="/deck/create")
+        i.fa-solid.fa-plus.icon-plus
+        |  Tạo bộ thẻ mới
+
+    form.filter-bar(method="GET", action="/deck")
+      .search-wrap
+        i.fa-solid.fa-magnifying-glass.search-icon
+        input.search-input(
+          type="text"
+          name="search"
+          placeholder="Tìm theo tên bộ thẻ..."
+          value=query.search || ''
+        )
+      .filter-divider
+      select.filter-select(name="category_id")
+        option(value="") Danh mục
+        each cat in categories
+          option(value=cat.id, selected=query.category_id == cat.id) #{cat.name}
+      select.filter-select(name="visibility")
+        option(value="") Trạng thái
+        option(value="public",  selected=query.visibility === 'public')  Công khai
+        option(value="private", selected=query.visibility === 'private') Riêng tư
+      select.filter-select(name="type")
+        option(value="",        selected=!query.type || query.type === '') Tất cả
+        option(value="created", selected=query.type === 'created') Đã tạo
+        option(value="saved",   selected=query.type === 'saved')   Đã lưu
+      .filter-divider
+      button.btn-clear(type="button", onclick="window.location='/deck'")
+        i.fa-solid.fa-xmark
+        |  Xóa bộ lọc
+
+    p.results-info
+      | Hiển thị&nbsp;
+      strong #{decks.length}
+      | &nbsp;/&nbsp;
+      strong #{total}
+      |  bộ thẻ
+
+    if decks && decks.length
+      .deck-grid
+        each deck in decks
+          - const isOwner  = deck.owner_id == locals.user.id
+          - const colorIdx = deck.category_id % 8
+          .deck-card
+            .deck-accent(class=`cat-${colorIdx}`)
+            .deck-top
+              span.badge(class=`cat-${colorIdx}`) #{deck.category ? deck.category.name : 'Chung'}
+              span.type-badge(class=isOwner ? 'type-created' : 'type-saved') #{isOwner ? 'Đã tạo' : 'Đã lưu'}
+            .deck-name #{deck.title}
+            .deck-desc #{deck.description || ''}
+            .deck-meta-row
+              span
+                i.fa-regular.fa-clone.icon-clone
+                |  #{deck.cardCount || 0} thẻ
+              if deck.visibility === 'public'
+                span.status-badge.status-public
+                  i.fa-solid.fa-globe.icon-globe
+                  |  Công khai
+              else
+                span.status-badge.status-private
+                  i.fa-solid.fa-lock.icon-lock
+                  |  Riêng tư
+            .deck-actions
+              a.btn-action.primary(href=`/deck/detail/${deck.id}`) Chi tiết
+              if isOwner
+                a.btn-action(href=`/deck/edit/${deck.id}`) Sửa
+                a.btn-action.danger(href=`/deck/delete/${deck.id}`, onclick="return confirm('Xóa bộ thẻ này?')") Xóa
+    else
+      p.no-decks Chưa có bộ thẻ nào. Hãy tạo bộ thẻ đầu tiên!
+
+    if totalPages > 1
+      .pagination
+        a.page-btn(href=`/deck?page=${currentPage - 1}`, class=currentPage <= 1 ? 'disabled' : '')
+          i.fa-solid.fa-chevron-left
+        each p in Array.from({length: totalPages}, (_, i) => i + 1)
+          a.page-btn(href=`/deck?page=${p}`, class=p === currentPage ? 'active' : '') #{p}
+        a.page-btn(href=`/deck?page=${currentPage + 1}`, class=currentPage >= totalPages ? 'disabled' : '')
+          i.fa-solid.fa-chevron-right

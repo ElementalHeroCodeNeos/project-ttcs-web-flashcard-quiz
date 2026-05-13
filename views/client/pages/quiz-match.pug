@@ -1,0 +1,35 @@
+extends ../layouts/default.pug
+
+block header
+  header.header
+    nav.study-nav
+      a.nav-logo(href="/") Flash#[span Learn]
+      a.btn-exit(href=`/deck/detail/${deck.id}`) Thoát
+
+block main
+  .study-container
+
+    .study-info-card
+      p.study-mode-label 🎮 Quiz ghép cặp
+      p.study-deck-title #{deck.title}
+      p.match-meta Ghép #[strong #{cards.length} cặp] từ với nghĩa tương ứng
+
+    .match-card
+      .score-row
+        p.pairs-left Còn lại: #[strong#pairsLeft #{cards.length}] cặp
+
+      .match-grid
+        div
+          p.match-col-label Mặt trước
+          #leftCol.match-col
+        div
+          p.match-col-label Mặt sau
+          #rightCol.match-col
+
+      button.btn-match-submit#submitBtn(type="button") Nộp bài
+
+block scripts
+  input#deckId(type="hidden", value=deck.id)
+  script(type="application/json")#cardsData !{JSON.stringify(cards)}
+  script(src="/client/assets/js/quiz-match.js")
+  script document.body.classList.add('study-mode');

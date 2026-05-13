@@ -1,0 +1,94 @@
+extends ../layouts/default.pug
+
+block main
+
+  //- HERO
+  .hero-section
+    .hero-inner
+      .inner-badge
+        i.fa-solid.fa-bolt.icon-badge
+        |  Học thông minh hơn mỗi ngày
+      h1.inner-title
+        | Ghi nhớ mọi thứ với Flashcard & SRS
+      p.inner-desc Tạo bộ thẻ học của riêng mình, ôn tập theo thuật toán giãn cách thông minh, làm quiz và khám phá kho bộ thẻ từ cộng đồng.
+      .inner-search
+        i.fa-solid.fa-magnifying-glass
+        input.search-input(type="text", placeholder="Tìm bộ thẻ, chủ đề...")
+        button.btn-search(type="button") Tìm kiếm
+      .inner-stats
+        .stat-item
+          .stat-num #{stats ? stats.deckCount.toLocaleString('vi-VN') : '0'}+
+          .stat-label Bộ thẻ công khai
+        .stat-divider
+        .stat-item
+          .stat-num #{stats ? stats.userCount.toLocaleString('vi-VN') : '0'}+
+          .stat-label Người học
+        .stat-divider
+        .stat-item
+          .stat-num #{stats ? stats.cardCount.toLocaleString('vi-VN') : '0'}+
+          .stat-label Thẻ flashcard
+
+  //- FEATURED DECKS
+  .featured-section
+    .container
+      .inner-wrap
+        .inner-head
+          h2.inner-title
+          i.fa-solid.fa-fire.icon-fire
+          |  Bộ thẻ nổi bật
+          a.inner-link(href="/explore") Xem tất cả →
+        .inner-body
+          if featuredDecks && featuredDecks.length
+            .deck-grid
+              each deck, i in featuredDecks
+                - const colorIdx = deck.category_id % 8
+                .deck-card
+                  .deck-accent(class=`cat-${colorIdx}`)
+                  .deck-top
+                    span.badge(class=`cat-${colorIdx}`) #{deck.category.name}
+                  .deck-name #{deck.title}
+                  .deck-desc #{deck.description || ''}
+                  .deck-meta
+                    .deck-author
+                      .author-avatar #{deck.owner.full_name.charAt(0).toUpperCase()}
+                      span #{deck.owner.full_name}
+                    span
+                      i.fa-regular.fa-clone.icon-clone
+                      |  #{deck.cardCount} thẻ
+                  a.btn-save(href=`/explore/${deck.id}`) Xem bộ thẻ
+          else
+            p.no-decks Chưa có bộ thẻ nào.
+
+  //- FEATURES
+  .features-section
+    .container
+      .inner-wrap
+        h2.inner-title Tại sao chọn FlashLearn?
+        .features-grid
+          .feature-card
+            .feature-icon.feature-icon--srs
+              i.fa-solid.fa-brain
+            h3.feature-title Ôn tập giãn cách SRS
+            p.feature-desc Thuật toán SM-2 tự động tính thời điểm ôn tập tối ưu, giúp bạn nhớ lâu hơn với ít công sức hơn.
+          .feature-card
+            .feature-icon.feature-icon--quiz
+              i.fa-solid.fa-gamepad
+            h3.feature-title Quiz đa dạng
+            p.feature-desc Trắc nghiệm 4 đáp án và quiz ghép cặp giúp ôn luyện thú vị, không nhàm chán.
+          .feature-card
+            .feature-icon.feature-icon--community
+              i.fa-solid.fa-earth-asia
+            h3.feature-title Kho thẻ cộng đồng
+            p.feature-desc Hàng nghìn bộ thẻ được chia sẻ bởi cộng đồng người học — tìm kiếm và lưu về dùng ngay.
+
+  //- CTA
+  .cta-section
+    .container
+      .inner-wrap
+        h2.inner-title
+          | Bắt đầu học ngay hôm nay
+          i.fa-solid.fa-rocket.icon-rocket
+        p.inner-desc Tạo tài khoản miễn phí và bắt đầu học ngay hôm nay.
+        .cta-btns
+          a.btn-cta-primary(href="/register") Đăng ký miễn phí
+          a.btn-cta-secondary(href="/explore") Khám phá bộ thẻ

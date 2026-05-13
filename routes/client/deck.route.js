@@ -8,10 +8,12 @@ router.get('/create', deckController.create);
 router.get('/edit/:id', deckController.edit);
 router.get('/detail/:id', deckController.detail);
 
-router.get('/study/:id', studyController.index);
+router.get('/study/:id', studyController.study);
 
 router.get('/quiz/choice/:id', quizController.choice);
-router.get('/quiz/choice/result/:id', quizController.choiceResult);
+router.post('/quiz/choice/:id', quizController.choiceSubmit);
 router.get('/quiz/match/:id', quizController.match);
+router.post('/quiz/match/:id', quizController.matchSubmit);
+router.get('/quiz/result/:attemptId', quizController.result);
 
 module.exports = router;

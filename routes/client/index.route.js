@@ -1,5 +1,7 @@
 const router = require('express').Router();
 const authMiddleware = require('../../middlewares/auth.middleware');
+const homeController = require('../../controllers/client/home.controller');
+const studyController = require('../../controllers/client/study.controller');
 const dashboardRoutes = require('./dashboard.route');
 const deckRoutes = require('./deck.route');
 const exploreRoutes = require('./explore.route');
@@ -10,6 +12,9 @@ router.use((req, res, next) => {
   next();
 });
 
+router.get('/', homeController.index);
+
+router.get('/study', authMiddleware.verifyToken(), studyController.studyDue);
 router.use('/dashboard', authMiddleware.verifyToken(), dashboardRoutes);
 router.use('/deck', authMiddleware.verifyToken(), deckRoutes);
 router.use('/explore', exploreRoutes);

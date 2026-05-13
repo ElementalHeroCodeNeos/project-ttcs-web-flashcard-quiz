@@ -1,0 +1,123 @@
+extends ../layouts/default.pug
+
+block main
+  .db-container
+
+    //- HERO
+    .db-hero
+      .db-hero-left
+        h1
+          | Chào #{greeting},&nbsp;
+          = locals.user.full_name.split(' ').pop()
+          | !&nbsp;
+          i.fa-solid.fa-hand-wave.icon-wave
+        p #{dueCount > 0 ? 'Đừng phá streak — bạn đang học rất tốt!' : 'Bạn đã ôn hết thẻ hôm nay, tuyệt vời!'}
+        .review-badge
+          span.review-num #{dueCount}
+          span.review-text thẻ cần ôn hôm nay
+        a.btn-white(href="/deck")
+          i.fa-solid.fa-bolt.icon-badge
+          |  Học ngay
+
+      .db-hero-stats
+        .db-hero-stat
+          .db-hero-stat-num #{totalStudied.toLocaleString('vi-VN')}
+          .db-hero-stat-label Thẻ đã học
+        .db-hero-stat
+          .db-hero-stat-num #{deckCount}
+          .db-hero-stat-label Bộ thẻ#[br]đang học
+        .db-hero-stat
+          .db-hero-stat-num #{avgAccuracy}%
+          .db-hero-stat-label Tỉ lệ đúng#[br]trung bình
+
+    //- CHARTS
+    .card
+      .card-header
+        span.card-title Thẻ đã học — 7 ngày qua
+        span.card-badge.cb-accent #{weeklyTotal} tổng
+      .chart-wrap
+        canvas#barChart
+
+    //- STREAK + QUICK STATS
+    .grid-2
+      .card
+        .card-header
+          span.card-title Chuỗi học tập
+        .streak-meta
+          i.fa-solid.fa-fire.streak-icon
+          div
+            .streak-num #{streak} ngày
+            .streak-desc học liên tiếp#{streak > 0 ? ' — cố lên!' : ' — bắt đầu hôm nay!'}
+        .streak-grid
+          each day in streakDays
+            .streak-day(class=day.status)
+              span #{day.date}
+              span.dl #{day.label}
+
+      .card
+        .card-header
+          span.card-title Thống kê nhanh
+        .quick-stats-grid
+          .quick-stat.qs-1
+            .quick-stat-num #{dueCount}
+            .quick-stat-label Cần ôn hôm nay
+          .quick-stat.qs-2
+            .quick-stat-num #{hardCardCount}
+            .quick-stat-label Thẻ khó nhớ
+          .quick-stat.qs-3
+            .quick-stat-num #{todayStudied}
+            .quick-stat-label Học hôm nay
+          .quick-stat.qs-4
+            .quick-stat-num #{deckCount}
+            .quick-stat-label Bộ thẻ đang học
+
+    //- RECENT DECKS
+    .db-section-header
+      span.db-section-title Bộ thẻ gần đây
+      a.db-section-link(href="/deck") Xem tất cả →
+
+    .deck-grid
+      each deck in recentDecks
+        - const colorIdx = deck.category_id % 8
+        a.deck-card(href=`/deck/detail/${deck.id}`)
+          .deck-top
+            span.badge(class=`cat-${colorIdx}`) #{deck.category ? deck.category.name : 'Chung'}
+            if deck.dueToday > 0
+              span.due-badge #{deck.dueToday} hôm nay
+          .deck-name #{deck.title}
+          .deck-meta #{deck.totalCards} thẻ · #{deck.progress}% hoàn thành
+          .deck-bar
+            .deck-bar-fill(class=`cat-${colorIdx}`, style=`width:${deck.progress}%`)
+
+      a.deck-new(href="/deck/create")
+        .deck-new-icon
+          i.fa-solid.fa-plus
+        span.deck-new-label Tạo bộ thẻ mới
+
+block scripts
+  script(src="https://cdn.jsdelivr.net/npm/chart.js")
+  script.
+    const weeklyData = !{JSON.stringify(weeklyData)};
+
+    new Chart(document.getElementById('barChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: weeklyData.labels,
+        datasets: [{
+          data: weeklyData.data,
+          backgroundColor: weeklyData.data.map((_, i) => i === 6 ? '#5c6ef8' : '#c7cdfc'),
+          borderRadius: 8,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#7c7c99', font: { size: 11 } }, border: { display: false } },
+          y: { grid: { color: '#f0f0f8' }, ticks: { color: '#7c7c99', font: { size: 11 } }, border: { display: false } }
+        }
+      }
+    });
+

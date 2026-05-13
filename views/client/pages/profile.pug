@@ -1,0 +1,54 @@
+extends ../layouts/default.pug
+
+block main
+  - const initial = user && user.full_name ? user.full_name.charAt(0).toUpperCase() : '?'
+
+  .profile-container
+
+    .profile-card
+      .profile-header
+        .avatar-circle-wrap
+          .avatar-circle
+            if user && user.avatar_url
+              img(src=user.avatar_url, alt=user.full_name)
+            else
+              | #{initial}
+          label.avatar-edit-btn(for="avatarInput", title="Đổi ảnh")
+            i.fa-solid.fa-pen
+        .profile-name #{user ? user.full_name : ''}
+        span.user-badge
+          i.fa-solid.fa-user
+          |  Người dùng
+
+      form(method="POST", action="/profile/edit", enctype="multipart/form-data")
+        input#avatarInput(type="file", name="avatar", accept="image/*", hidden)
+
+        .form-group
+          label.profile-label Họ tên
+          input.form-input(type="text", name="full_name", value=user ? user.full_name : '')
+
+        .form-group
+          label.profile-label Email
+          input.form-input(type="email", value=user ? user.email : '', readonly)
+          p.form-hint Email không thể thay đổi.
+
+        hr.profile-divider
+        button.btn-profile-save(type="submit") Lưu thay đổi
+
+    .profile-card
+      form(method="POST", action="/profile/change-password")
+
+        .form-group
+          label.profile-label Mật khẩu hiện tại
+          input.form-input(type="password", name="current_password", placeholder="Nhập mật khẩu hiện tại")
+
+        .form-group
+          label.profile-label Mật khẩu mới
+          input.form-input(type="password", name="new_password", placeholder="Ít nhất 6 ký tự")
+
+        .form-group
+          label.profile-label Xác nhận mật khẩu mới
+          input.form-input(type="password", name="confirm_password", placeholder="Nhập lại mật khẩu mới")
+
+        hr.profile-divider
+        button.btn-profile-save(type="submit") Đổi mật khẩu
