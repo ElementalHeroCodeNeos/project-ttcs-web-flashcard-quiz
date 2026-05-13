@@ -53,9 +53,15 @@ module.exports.index = async (req, res) => {
     const progressIds = progressRows.map(r => parseInt(r.id));
 
     // ── Stats đơn giản ───────────────────────────────────────────────
-    const dueCount = allCardIds.length ? await CardProgress.count({
+    const progressedCount = allCardIds.length ? await CardProgress.count({
+      where: { user_id: userId, card_id: { [Op.in]: allCardIds } }
+    }) : 0;
+    const newCardCount = allCardIds.length - progressedCount;
+
+    const dueProgressCount = allCardIds.length ? await CardProgress.count({
       where: { user_id: userId, card_id: { [Op.in]: allCardIds }, due_date: { [Op.lte]: today } }
     }) : 0;
+    const dueCount = dueProgressCount + newCardCount;
 
     const totalStudied = await CardProgress.count({
       where: { user_id: userId, repetitions: { [Op.gt]: 0 } }

@@ -19,10 +19,9 @@ INSERT INTO categories (name, description, position, status) VALUES
 
 -- ============================
 -- ADMIN USER
--- password_hash bên dưới = bcrypt("password", 10)
--- Đổi mật khẩu sau khi login lần đầu
+-- password_hash bên dưới = bcrypt("Admin@123", 10)
 -- ============================
 INSERT INTO users (full_name, email, password_hash, role, status) VALUES
-  ('Admin',         'admin@gmail.com',       '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'active'),
-  ('Nguyễn Văn An', 'vananabc@gmail.com',    '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'user',  'active'),
-  ('Trần Thị Bảo',  'baotran@gmail.com',     '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'user',  'active');
+  ('Admin',         'admin@gmail.com',       '$2b$10$dEMj0YO7opcv7OHHqaZ8p.p5mSewsDmFf6TQrxv.UgrqvPUxVn49m', 'admin', 'active'),
+  ('Nguyễn Văn An', 'vananabc@gmail.com',    '$2b$10$dEMj0YO7opcv7OHHqaZ8p.p5mSewsDmFf6TQrxv.UgrqvPUxVn49m', 'user',  'active'),
+  ('Trần Thị Bảo',  'baotran@gmail.com',     '$2b$10$dEMj0YO7opcv7OHHqaZ8p.p5mSewsDmFf6TQrxv.UgrqvPUxVn49m', 'user',  'active');
