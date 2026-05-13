@@ -221,17 +221,21 @@ project-web-flashcard/
 | Method | Route | Mô tả |
 |--------|-------|--------|
 | GET | /admin/dashboard | Thống kê hệ thống |
-| GET | /admin/user/list | Danh sách user |
-| PATCH | /admin/user/:id/status | Khóa/mở khóa tài khoản |
-| GET | /admin/deck/list | Danh sách public decks |
-| PATCH | /admin/deck/:id/hide | Ẩn deck vi phạm |
-| DELETE | /admin/deck/:id | Xóa deck vi phạm |
 | GET | /admin/category/list | Danh sách danh mục |
 | GET | /admin/category/create | Form tạo danh mục |
 | POST | /admin/category/create | Tạo danh mục |
 | GET | /admin/category/edit/:id | Form sửa danh mục |
-| POST | /admin/category/edit/:id | Cập nhật danh mục |
-| DELETE | /admin/category/delete/:id | Xóa danh mục |
+| PATCH | /admin/category/edit/:id | Cập nhật danh mục |
+| PATCH | /admin/category/change-status/:id | Ẩn/hiện danh mục |
+| GET | /admin/user/list | Danh sách user |
+| GET | /admin/user/detail/:id | Chi tiết user |
+| PATCH | /admin/user/change-status/:id | Khóa/mở khóa tài khoản |
+| GET | /admin/deck/list | Danh sách public decks |
+| PATCH | /admin/deck/change-status/:id | Ẩn/hiện deck |
+| GET | /admin/profile | Hồ sơ admin |
+| PATCH | /admin/profile | Cập nhật họ tên + ảnh |
+| GET | /admin/profile/change-password | Form đổi mật khẩu |
+| PATCH | /admin/profile/change-password | Xử lý đổi mật khẩu |
 
 ---
 
@@ -239,12 +243,11 @@ project-web-flashcard/
 
 | Giai đoạn | Nội dung | Trạng thái |
 |---|---|---|
-| Phase 1 | Setup + Auth (login, register, forgot password) | ✅ Xong |
-| Phase 2 | Client views (13 trang) + Client JS | ✅ Xong |
-| Phase 3 | Admin views (6 trang) | ⬜ Chưa bắt đầu |
+| Phase 1 | Setup project + Auth (login, register, forgot password) | ✅ Xong |
+| Phase 2 | Client views (13 trang) | ✅ Xong |
+| Phase 3 | Admin views (9 trang) + CSS + JS | ✅ Xong |
 | Phase 4 | Client JS (study, quiz-choice, quiz-match) | ✅ Xong |
-| Phase 5 | Models + Client controllers (POST/PATCH/DELETE) | ✅ Xong |
-| Phase 6 | Admin controllers | ⬜ Chưa bắt đầu |
+| Phase 5 | Models + Controllers (client + admin) | ✅ Xong |
 
 ---
 
