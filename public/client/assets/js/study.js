@@ -21,6 +21,10 @@
   const elProgressLabel = document.getElementById('progressLabel');
   const elProgressPct   = document.getElementById('progressPct');
   const elProgressFill  = document.getElementById('progressFill');
+  const elBtnRow        = document.querySelector('.study-btn-row');
+  const elIntervalHard  = document.getElementById('intervalHard');
+  const elIntervalGood  = document.getElementById('intervalGood');
+  const elIntervalEasy  = document.getElementById('intervalEasy');
 
   function formatInterval(days) {
     if (!days || days <= 0) return '< 1 phút';
@@ -34,23 +38,23 @@
     const easeFactor   = sp.ease_factor   || 2.5;
     const repetitions  = sp.repetitions   || 0;
 
-    document.getElementById('intervalHard').textContent = formatInterval(Math.round(intervalDays * 1.2) || 1);
+    elIntervalHard.textContent = formatInterval(Math.round(intervalDays * 1.2) || 1);
 
     let goodDays;
     if (repetitions === 0) goodDays = 1;
     else if (repetitions === 1) goodDays = 6;
     else goodDays = Math.round(intervalDays * easeFactor);
-    document.getElementById('intervalGood').textContent = formatInterval(goodDays);
+    elIntervalGood.textContent = formatInterval(goodDays);
 
     const easyDays = Math.round(Math.max(intervalDays, 1) * 2);
-    document.getElementById('intervalEasy').textContent = formatInterval(easyDays);
+    elIntervalEasy.textContent = formatInterval(easyDays);
   }
 
   function loadCard() {
     if (queue.length === 0) {
       updateProgress();
       elWrap.style.display = 'none';
-      document.querySelector('.study-btn-row').style.display = 'none';
+      elBtnRow.style.display = 'none';
       elRatingWrap.style.display = 'none';
       elHint.style.display = 'none';
       elDone.style.display = 'block';
@@ -105,11 +109,11 @@
   }
 
   function applySM2(card, rating) {
-    var sp = card.studyProgress || {};
-    var interval   = sp.interval_days || 0;
-    var ease       = sp.ease_factor   || 2.5;
-    var reps       = sp.repetitions   || 0;
-    var lapses     = sp.lapse_count   || 0;
+    let sp = card.studyProgress || {};
+    let interval   = sp.interval_days || 0;
+    let ease       = sp.ease_factor   || 2.5;
+    let reps       = sp.repetitions   || 0;
+    let lapses     = sp.lapse_count   || 0;
 
     if (rating === 'again') {
       interval = 1;

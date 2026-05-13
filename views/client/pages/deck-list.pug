@@ -73,7 +73,7 @@ block main
               a.btn-action.primary(href=`/deck/detail/${deck.id}`) Chi tiết
               if isOwner
                 a.btn-action(href=`/deck/edit/${deck.id}`) Sửa
-                a.btn-action.danger(href=`/deck/delete/${deck.id}`, onclick="return confirm('Xóa bộ thẻ này?')") Xóa
+                button.btn-action.danger(type="button", onclick=`deleteDeck(${deck.id})`) Xóa
     else
       p.no-decks Chưa có bộ thẻ nào. Hãy tạo bộ thẻ đầu tiên!
 
@@ -85,3 +85,12 @@ block main
           a.page-btn(href=`/deck?page=${p}`, class=p === currentPage ? 'active' : '') #{p}
         a.page-btn(href=`/deck?page=${currentPage + 1}`, class=currentPage >= totalPages ? 'disabled' : '')
           i.fa-solid.fa-chevron-right
+
+block scripts
+  script.
+    function deleteDeck(id) {
+      if (!confirm('Xóa bộ thẻ này?')) return;
+      fetch('/deck/delete/' + id, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => { if (data.code === 'success') window.location.href = data.redirect; });
+    }

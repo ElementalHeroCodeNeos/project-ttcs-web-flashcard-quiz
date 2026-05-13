@@ -101,7 +101,43 @@ block main
 block scripts
   if isOwner
     script.
+      const DECK_ID = !{deck.id};
       let deleteTarget = null;
+
+      // Thêm thẻ inline
+      document.querySelector('.add-card-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const front = this.querySelector('[name="front"]').value.trim();
+        const back  = this.querySelector('[name="back"]').value.trim();
+        if (!front || !back) return;
+
+        fetch('/deck/' + DECK_ID + '/card', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ front, back })
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.code !== 'success') return;
+          const card = data.card;
+          const list = document.querySelector('.card-list-section .card-col-header');
+          const row  = document.createElement('div');
+          row.className = 'card-row';
+          row.id = 'row-' + card.id;
+          row.innerHTML = `
+            <div class="card-cell front" id="front-${card.id}">${card.front}</div>
+            <div class="card-cell back"  id="back-${card.id}">${card.back}</div>
+            <div class="card-cell actions">
+              <button class="btn-icon" onclick="editRow(${card.id})" title="Sửa"><i class="fa-solid fa-pen"></i></button>
+              <button class="btn-icon danger" onclick="showDelete(${card.id})" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          `;
+          list.insertAdjacentElement('afterend', row);
+          const countEls = document.querySelectorAll('.deck-stat strong, .card-count strong');
+          countEls.forEach(el => { el.textContent = parseInt(el.textContent) + 1; });
+          this.reset();
+        });
+      });
 
       function editRow(id) {
         const row = document.getElementById('row-' + id);
@@ -120,11 +156,24 @@ block scripts
       }
 
       function saveRow(id) {
-        const row = document.getElementById('row-' + id);
-        row.classList.remove('editing');
-        document.getElementById('front-' + id).textContent = document.getElementById('edit-front-' + id).value;
-        document.getElementById('back-'  + id).textContent = document.getElementById('edit-back-'  + id).value;
-        restoreActions(id);
+        const front = document.getElementById('edit-front-' + id).value.trim();
+        const back  = document.getElementById('edit-back-'  + id).value.trim();
+        if (!front || !back) return;
+
+        fetch('/deck/' + DECK_ID + '/card/' + id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ front, back })
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.code !== 'success') return;
+          const row = document.getElementById('row-' + id);
+          row.classList.remove('editing');
+          document.getElementById('front-' + id).textContent = front;
+          document.getElementById('back-'  + id).textContent = back;
+          restoreActions(id);
+        });
       }
 
       function cancelEdit(id) {
@@ -153,6 +202,14 @@ block scripts
       }
 
       function confirmDelete() {
-        if (deleteTarget) document.getElementById('row-' + deleteTarget).remove();
-        hideDelete();
+        if (!deleteTarget) return;
+        fetch('/deck/' + DECK_ID + '/card/' + deleteTarget, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.code !== 'success') return;
+          document.getElementById('row-' + deleteTarget).remove();
+          const countEls = document.querySelectorAll('.deck-stat strong, .card-count strong');
+          countEls.forEach(el => { el.textContent = Math.max(0, parseInt(el.textContent) - 1); });
+          hideDelete();
+        });
       }

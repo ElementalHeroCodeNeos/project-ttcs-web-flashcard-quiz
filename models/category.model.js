@@ -1,0 +1,17 @@
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
+
+const Category = sequelize.define('Category', {
+  id:          { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
+  name:        { type: DataTypes.STRING(100), allowNull: false, unique: true },
+  description: { type: DataTypes.TEXT },
+  position:    { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  status:      { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'active' },
+  created_at:  { type: DataTypes.DATE },
+  updated_at:  { type: DataTypes.DATE }
+}, {
+  tableName: 'categories',
+  timestamps: false
+});
+
+module.exports = Category;

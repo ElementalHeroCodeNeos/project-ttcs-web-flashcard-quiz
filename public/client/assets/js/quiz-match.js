@@ -76,15 +76,12 @@
     const leftId  = selectedLeft.dataset.id;
     const rightId = el.dataset.id;
 
-    // Un-pair the current left if already paired
     unpairLeft(leftId);
 
-    // Un-pair whichever left currently holds this right
     if (rightPairs[rightId]) {
       unpairLeft(rightPairs[rightId]);
     }
 
-    // Assign pair with next available color
     const colorIdx = colorPool.shift();
     leftPairs[leftId]    = rightId;
     rightPairs[rightId]  = leftId;
