@@ -1,0 +1,27 @@
+doctype html
+html
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title #{pageTitle}
+    link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css")
+    link(rel="stylesheet", href="/admin/assets/css/style.css")
+  body
+    - const _msg = locals.messages || {}
+    - if (_msg.success)
+      div(class="alert alert-success" alert-time="3000")
+        span #{_msg.success}
+    - if (_msg.error)
+      div(class="alert alert-error" alert-time="4000")
+        span #{_msg.error}
+
+    include ../partials/header.pug
+
+    include ../partials/sider.pug
+
+    main.main
+      block main
+
+    script(src="https://cdn.jsdelivr.net/npm/chart.js")
+    script(src="https://cdn.jsdelivr.net/npm/just-validate@4.3.0/dist/just-validate.production.min.js")
+    script(src="/admin/assets/js/script.js")

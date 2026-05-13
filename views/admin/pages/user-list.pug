@@ -1,0 +1,74 @@
+extends ../layouts/default.pug
+
+block main
+  h1.box-title Quản lý người dùng
+
+  //- Section 4
+  .section-4
+    .inner-wrap
+      .inner-item.inner-label
+        i.fa-solid.fa-filter
+        |  Bộ lọc
+      .inner-item
+        select(filter-status)
+          option(value="") Trạng thái
+          option(value="active") Hoạt động
+          option(value="locked") Đã khóa
+      .inner-item.inner-reset(filter-reset)
+        i.fa-solid.fa-rotate-left
+        |  Xóa bộ lọc
+  //- End Section 4
+
+  //- Section 5
+  .section-5
+    .inner-wrap
+      .inner-search
+        i.fa-solid.fa-magnifying-glass
+        input(type="text" placeholder="Tìm kiếm theo họ tên, email" search)
+  //- End Section 5
+
+  //- Section 6
+  .section-6
+    .table-2
+      table
+        thead
+          tr
+            th Họ tên
+            th.inner-center Ảnh đại diện
+            th Email
+            th.inner-center Số bộ thẻ
+            th.inner-center Trạng thái
+            th.inner-center Ngày tạo
+            th Hành động
+        tbody
+          each item in userList
+            tr
+              td #{item.full_name}
+              td.inner-center
+                img.inner-avatar(src=item.avatar_url || '/admin/assets/images/avatar-default.svg' alt=item.full_name)
+              td #{item.email}
+              td.inner-center #{item.deck_count || 0}
+              td.inner-center
+                if item.status === 'active'
+                  .badge.badge-green Hoạt động
+                else if item.status === 'locked'
+                  .badge.badge-red Đã khóa
+              td.inner-center #{new Date(item.created_at).toLocaleDateString('vi-VN')}
+              td
+                .inner-buttons
+                  a(href=`/admin/user/detail/${item.id}`)
+                    i.fa-regular.fa-eye
+                  button(button-status data-api=`/admin/user/change-status/${item.id}` data-status=item.status)
+                    if item.status === 'active'
+                      i.fa-solid.fa-lock
+                    else
+                      i.fa-solid.fa-lock-open
+  //- End Section 6
+
+  //- Section 7
+  .section-7
+    span.inner-label Hiển thị #{pagination.skip + 1} - #{pagination.skip + userList.length} của #{pagination.totalRecord}
+    select.inner-pagination(pagination)
+      - for (let i = 1; i <= pagination.totalPage; i++)
+        option(value=i selected=(i === pagination.currentPage)) Trang #{i}
+  //- End Section 7

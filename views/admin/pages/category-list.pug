@@ -1,0 +1,60 @@
+extends ../layouts/default.pug
+
+block main
+  h1.box-title Quản lý danh mục
+
+  //- Section 4
+  .section-4
+    .inner-wrap
+      .inner-item.inner-label
+        i.fa-solid.fa-filter
+        |  Bộ lọc
+      .inner-item
+        select(filter-status)
+          option(value="") Trạng thái
+          option(value="active") Hoạt động
+          option(value="inactive") Tạm dừng
+      .inner-item.inner-reset(filter-reset)
+        i.fa-solid.fa-rotate-left
+        |  Xóa bộ lọc
+  //- End Section 4
+
+  //- Section 5
+  .section-5
+    .inner-wrap
+      .inner-button-create
+        a(href="/admin/category/create") + Tạo mới
+  //- End Section 5
+
+  //- Section 6
+  .section-6
+    .table-2
+      table
+        thead
+          tr
+            th Tên danh mục
+            th Mô tả
+            th.inner-center Vị trí
+            th.inner-center Trạng thái
+            th Hành động
+        tbody
+          each item in categoryList
+            tr
+              td #{item.name}
+              td #{item.description || '—'}
+              td.inner-center #{item.position}
+              td.inner-center
+                if item.status === 'active'
+                  .badge.badge-green Hoạt động
+                else
+                  .badge.badge-red Tạm dừng
+              td
+                .inner-buttons
+                  a.inner-edit(href=`/admin/category/edit/${item.id}`)
+                    i.fa-regular.fa-pen-to-square
+                  button(button-status data-api=`/admin/category/change-status/${item.id}` data-status=item.status)
+                    if item.status === 'active'
+                      i.fa-regular.fa-eye-slash
+                    else
+                      i.fa-regular.fa-eye
+  //- End Section 6

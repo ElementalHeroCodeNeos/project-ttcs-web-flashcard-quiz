@@ -1,0 +1,25 @@
+extends ../layouts/default.pug
+
+block main
+  h1.box-title Chỉnh sửa danh mục
+
+  .section-8
+    form#category-edit-form
+      .inner-group
+        label.inner-label(for="name") Tên danh mục
+        input(type="text" id="name" name="name" value=category.name)
+      .inner-group
+        label.inner-label(for="position") Vị trí
+        input(type="number" id="position" name="position" value=category.position)
+      .inner-group.inner-two-col
+        label.inner-label(for="description") Mô tả
+        textarea(id="description" name="description") #{category.description || ''}
+      .inner-group
+        label.inner-label(for="status") Trạng thái
+        select(id="status" name="status")
+          option(value="active" selected=(category.status === 'active')) Hoạt động
+          option(value="inactive" selected=(category.status === 'inactive')) Tạm dừng
+      .inner-button.inner-two-col
+        button Cập nhật
+    .inner-back
+      a(href="/admin/category/list") Quay lại danh sách

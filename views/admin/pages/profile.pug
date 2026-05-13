@@ -1,0 +1,26 @@
+extends ../layouts/default.pug
+
+block main
+  h1.box-title Thông tin cá nhân
+
+  .section-8
+    form#profile-form
+      .inner-group
+        label.inner-label(for="full_name") Họ tên
+        input(type="text" id="full_name" name="full_name" value=user.full_name)
+      .inner-group
+        label.inner-label Email
+        input(type="email" value=user.email readonly)
+      .inner-group.inner-two-col
+        label.inner-label Ảnh đại diện
+        .inner-upload-image
+          input#avatar(type="file" name="avatar" accept="image/*")
+          .inner-upload-preview
+            if user.avatar_url
+              img(src=user.avatar_url alt=user.full_name)
+            else
+              i.fa-solid.fa-user
+      .inner-button.inner-two-col
+        button Cập nhật
+    .inner-back
+      a(href="/admin/profile/change-password") Đổi mật khẩu

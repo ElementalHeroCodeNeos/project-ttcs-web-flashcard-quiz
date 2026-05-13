@@ -1,0 +1,30 @@
+extends ../layouts/default.pug
+
+block main
+  h1.box-title Tổng quan
+
+  .section-1
+    .inner-item
+      .inner-icon
+        i.fa-solid.fa-users
+      .inner-content
+        .inner-title Người dùng
+        .inner-number #{overview ? overview.totalUser.toLocaleString("vi-VN") : 0}
+    .inner-item
+      .inner-icon
+        i.fa-solid.fa-layer-group
+      .inner-content
+        .inner-title Bộ thẻ
+        .inner-number #{overview ? overview.totalDeck.toLocaleString("vi-VN") : 0}
+    .inner-item
+      .inner-icon
+        i.fa-solid.fa-earth-asia
+      .inner-content
+        .inner-title Bộ thẻ công khai
+        .inner-number #{overview ? overview.totalPublicDeck.toLocaleString("vi-VN") : 0}
+    .inner-item
+      .inner-icon
+        i.fa-solid.fa-table-cells-large
+      .inner-content
+        .inner-title Danh mục
+        .inner-number #{overview ? overview.totalCategory.toLocaleString("vi-VN") : 0}

@@ -1,0 +1,15 @@
+header.header
+  .inner-logo
+    a(href="/admin/dashboard") FlashCard
+  .inner-wrap
+    .inner-account
+      .inner-avatar
+        if user && user.avatar_url
+          img(src=user.avatar_url, alt=user.full_name)
+        else
+          img(src="/admin/assets/images/avatar-default.svg", alt="")
+      .inner-text
+        .inner-name #{user ? user.full_name : ''}
+        .inner-role Admin
+    button.inner-button-menu
+      i.fa-solid.fa-bars

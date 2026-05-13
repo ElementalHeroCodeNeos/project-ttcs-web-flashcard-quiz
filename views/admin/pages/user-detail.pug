@@ -1,0 +1,47 @@
+extends ../layouts/default.pug
+
+block main
+  h1.box-title Chi tiết người dùng
+
+  .section-8
+    h2.inner-section-title Thông tin tài khoản
+    form#user-detail-form
+      .inner-group
+        label.inner-label Họ tên
+        input(type="text" value=userDetail.full_name readonly)
+      .inner-group
+        label.inner-label Email
+        input(type="email" value=userDetail.email readonly)
+      .inner-group
+        label.inner-label Số bộ thẻ đã tạo
+        input(type="text" value=userDetail.deck_count || 0 readonly)
+      .inner-group
+        label.inner-label Ngày tạo
+        input(type="text" value=new Date(userDetail.created_at).toLocaleDateString('vi-VN') readonly)
+    h2.inner-section-title Bộ thẻ công khai của người dùng
+    .table-2
+      table
+        thead
+          tr
+            th Tên bộ thẻ
+            th Danh mục
+            th.inner-center Số thẻ
+            th.inner-center Trạng thái
+        tbody
+          each deck in deckList
+            tr
+              td #{deck.title}
+              td #{deck.category ? deck.category.name : '—'}
+              td.inner-center #{deck.card_count || 0}
+              td.inner-center
+                if deck.status === 'active'
+                  .badge.badge-green Hiện
+                else if deck.status === 'hidden'
+                  .badge.badge-orange Ẩn
+    .inner-button
+      if userDetail.status === 'active'
+        button(button-status data-api=`/admin/user/change-status/${userDetail.id}` data-status="active") Khóa tài khoản
+      else
+        button(button-status data-api=`/admin/user/change-status/${userDetail.id}` data-status="locked") Mở khóa tài khoản
+    .inner-back
+      a(href="/admin/user/list") Quay lại danh sách

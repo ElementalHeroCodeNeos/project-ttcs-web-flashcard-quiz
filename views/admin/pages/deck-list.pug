@@ -1,0 +1,71 @@
+extends ../layouts/default.pug
+
+block main
+  h1.box-title Quản lý bộ thẻ công khai
+
+  //- Section 4
+  .section-4
+    .inner-wrap
+      .inner-item.inner-label
+        i.fa-solid.fa-filter
+        |  Bộ lọc
+      .inner-item
+        select(filter-category)
+          option(value="") Danh mục
+          each cat in categoryList
+            option(value=cat.id) #{cat.name}
+      .inner-item.inner-reset(filter-reset)
+        i.fa-solid.fa-rotate-left
+        |  Xóa bộ lọc
+  //- End Section 4
+
+  //- Section 5
+  .section-5
+    .inner-wrap
+      .inner-search
+        i.fa-solid.fa-magnifying-glass
+        input(type="text" placeholder="Tìm kiếm theo tên bộ thẻ" search)
+  //- End Section 5
+
+  //- Section 6
+  .section-6
+    .table-2
+      table
+        thead
+          tr
+            th Tên bộ thẻ
+            th Danh mục
+            th Người tạo
+            th.inner-center Số thẻ
+            th.inner-center Số lượt lưu
+            th.inner-center Trạng thái
+            th Hành động
+        tbody
+          each item in deckList
+            tr
+              td #{item.title}
+              td #{item.category ? item.category.name : '—'}
+              td #{item.owner ? item.owner.full_name : '—'}
+              td.inner-center #{item.card_count || 0}
+              td.inner-center #{item.save_count || 0}
+              td.inner-center
+                if item.status === 'active'
+                  .badge.badge-green Hiện
+                else if item.status === 'hidden'
+                  .badge.badge-orange Ẩn
+              td
+                .inner-buttons
+                  button(button-status data-api=`/admin/deck/change-status/${item.id}` data-status=item.status)
+                    if item.status === 'active'
+                      i.fa-solid.fa-lock
+                    else
+                      i.fa-solid.fa-lock-open
+  //- End Section 6
+
+  //- Section 7
+  .section-7
+    span.inner-label Hiển thị #{pagination.skip + 1} - #{pagination.skip + deckList.length} của #{pagination.totalRecord}
+    select.inner-pagination(pagination)
+      - for (let i = 1; i <= pagination.totalPage; i++)
+        option(value=i selected=(i === pagination.currentPage)) Trang #{i}
+  //- End Section 7
