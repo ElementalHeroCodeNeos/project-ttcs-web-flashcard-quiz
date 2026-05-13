@@ -120,11 +120,6 @@ project-web-flashcard/
 │       ├── deck.route.js         # /deck/* bao gồm cả study và quiz
 │       ├── explore.route.js
 │       └── profile.route.js
-├── validates/
-│   ├── account/
-│   │   └── account.validate.js
-│   ├── admin/
-│   └── client/
 ├── views/
 │   ├── account/
 │   │   ├── layouts/
