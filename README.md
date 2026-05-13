@@ -203,8 +203,9 @@ project-web-flashcard/
 | PATCH | /deck/detail/:id/card/:cid | Sửa thẻ inline | User (owner) |
 | DELETE | /deck/detail/:id/card/:cid | Xóa thẻ | User (owner) |
 | POST | /deck/:id/save | Lưu public deck vào thư viện | User |
-| GET | /deck/study/:id | Trang học SRS | User |
-| PATCH | /study/:cardId | Lưu kết quả Good/Easy | User |
+| GET | /study | Học tất cả thẻ đến hạn (SRS review) | User |
+| GET | /deck/study/:id | Học tất cả thẻ trong bộ (tự do) | User |
+| PATCH | /study/rate | Lưu kết quả Good/Easy vào study_progress | User |
 | GET | /deck/quiz/choice/:id | Trắc nghiệm 4 đáp án | User |
 | POST | /deck/quiz/choice/:id | Nộp kết quả trắc nghiệm | User |
 | GET | /deck/quiz/match/:id | Quiz ghép cặp | User |
@@ -213,8 +214,7 @@ project-web-flashcard/
 | GET | /explore | Khám phá public decks | Guest + User |
 | GET | /explore/:id | Chi tiết public deck | Guest + User |
 | GET | /profile | Hồ sơ cá nhân | User |
-| POST | /profile/edit | Cập nhật profile | User |
-| POST | /profile/change-password | Đổi mật khẩu | User |
+| POST | /profile/edit | Cập nhật họ tên + ảnh đại diện | User |
 
 ### Admin
 
@@ -242,7 +242,9 @@ project-web-flashcard/
 | Phase 1 | Setup + Auth (login, register, forgot password) | ✅ Xong |
 | Phase 2 | Client views (13 trang) + Client JS | ✅ Xong |
 | Phase 3 | Admin views (6 trang) | ⬜ Chưa bắt đầu |
-| Phase 4 | POST handlers — chờ DB/models | ⬜ Chờ |
+| Phase 4 | Client JS (study, quiz-choice, quiz-match) | ✅ Xong |
+| Phase 5 | Models + Client controllers (POST/PATCH/DELETE) | ✅ Xong |
+| Phase 6 | Admin controllers | ⬜ Chưa bắt đầu |
 
 ---
 
@@ -268,13 +270,13 @@ Good:
   if repetitions == 1 → interval_days = 6
   else                → interval_days = round(interval_days * ease_factor)
   repetitions += 1
-  → LƯU DB (PATCH /study/:cardId), thẻ ra khỏi queue
+  → LƯU DB (PATCH /study/rate), thẻ ra khỏi queue
 
 Easy:
-  interval_days = round(interval_days * 2)
+  interval_days = round(max(interval_days, 1) * 2)
   ease_factor   = min(3.5, ease_factor + 0.15)
   repetitions  += 1
-  → LƯU DB (PATCH /study/:cardId), thẻ ra khỏi queue
+  → LƯU DB (PATCH /study/rate), thẻ ra khỏi queue
 
 due_date = CURRENT_DATE + interval_days
 ```

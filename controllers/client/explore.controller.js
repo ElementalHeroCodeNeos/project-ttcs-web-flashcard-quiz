@@ -1,62 +1,136 @@
-const STUB_DECKS = [
-  { id: 1, category_id: 0, category_name: 'Ngoại ngữ',  title: 'IELTS Vocabulary Band 7+',  description: 'Từ vựng IELTS học thuật theo chủ đề, band 7.0 trở lên.',             card_count: 120, author_name: 'Trần Minh Khoa',   is_saved: false },
-  { id: 2, category_id: 1, category_name: 'Toán học',    title: 'Giải tích 1 — Công thức',   description: 'Tổng hợp công thức giải tích, vi phân và tích phân cơ bản.',         card_count:  84, author_name: 'Lê Văn Đức',         is_saved: false },
-  { id: 3, category_id: 3, category_name: 'Lịch sử',     title: 'Lịch sử Việt Nam 1945–1975',description: 'Các sự kiện lịch sử quan trọng giai đoạn kháng chiến.',              card_count:  56, author_name: 'Nguyễn Thị Hương',   is_saved: true  },
-  { id: 4, category_id: 2, category_name: 'Lập trình',   title: 'Python cơ bản',             description: 'Syntax, built-in functions, OOP và các khái niệm cốt lõi Python.', card_count: 200, author_name: 'Phạm Quốc Bảo',     is_saved: false },
-  { id: 5, category_id: 4, category_name: 'Khoa học',    title: 'Hóa học đại cương',         description: 'Bảng tuần hoàn, liên kết hóa học, phản ứng oxi hóa khử.',           card_count:  67, author_name: 'Hoàng Anh Tú',       is_saved: false },
-  { id: 6, category_id: 5, category_name: 'Y khoa',      title: 'Giải phẫu học cơ bản',      description: 'Các cơ quan, hệ thống trong cơ thể người — giải phẫu học đại cương.',card_count: 150, author_name: 'Mai Thị Lan',         is_saved: false },
-  { id: 7, category_id: 0, category_name: 'Ngoại ngữ',  title: 'N3 Kanji 漢字',              description: '800 kanji trình độ N3 theo JLPT, có ví dụ và âm đọc.',               card_count: 800, author_name: 'Đặng Minh Tuấn',     is_saved: false },
-  { id: 8, category_id: 2, category_name: 'Lập trình',   title: 'SQL cơ bản đến nâng cao',   description: 'Các câu lệnh SQL từ SELECT cơ bản đến JOIN, subquery, index.',       card_count:  95, author_name: 'Vũ Thành Long',       is_saved: false },
-  { id: 9, category_id: 1, category_name: 'Toán học',    title: 'Xác suất thống kê',         description: 'Công thức xác suất, phân phối chuẩn, kiểm định giả thuyết.',        card_count:  72, author_name: 'Bùi Thanh Hà',        is_saved: false }
-];
-
-const STUB_CATEGORIES = [
-  { id: 0, name: 'Ngoại ngữ' }, { id: 1, name: 'Toán học' }, { id: 2, name: 'Lập trình' },
-  { id: 3, name: 'Lịch sử' },   { id: 4, name: 'Khoa học' }, { id: 5, name: 'Y khoa' }
-];
+const { Op } = require('sequelize');
+const sequelize  = require('../../config/database');
+const Deck       = require('../../models/deck.model');
+const Card       = require('../../models/card.model');
+const Category   = require('../../models/category.model');
+const SavedDeck  = require('../../models/savedDeck.model');
+const User       = require('../../models/user.model');
 
 const LIMIT = 9;
 
-module.exports.index = (req, res) => {
-  const keyword     = req.query.keyword     || '';
-  const categoryId  = req.query.category_id || '';
-  const page        = parseInt(req.query.page) || 1;
+module.exports.index = async (req, res) => {
+  try {
+    const userId     = res.locals.user ? parseInt(res.locals.user.id) : null;
+    const keyword    = req.query.keyword    || '';
+    const categoryId = req.query.category_id || '';
+    const page       = parseInt(req.query.page) || 1;
 
-  let decks = STUB_DECKS;
-  if (keyword)    decks = decks.filter(d => d.title.toLowerCase().includes(keyword.toLowerCase()));
-  if (categoryId) decks = decks.filter(d => String(d.category_id) === categoryId);
+    const where = { visibility: 'public', status: 'active' };
+    if (categoryId) where.category_id = parseInt(categoryId);
+    if (keyword)    where.title = { [Op.iLike]: `%${keyword}%` };
 
-  const total = decks.length;
-  const paged = decks.slice((page - 1) * LIMIT, page * LIMIT);
+    const total      = await Deck.count({ where });
+    const totalPages = Math.ceil(total / LIMIT) || 1;
+    const currentPage = Math.min(page, totalPages);
+    const offset      = (currentPage - 1) * LIMIT;
 
-  res.render('client/pages/explore', {
-    title:           'Khám phá',
-    decks:           paged,
-    categories:      STUB_CATEGORIES,
-    total:           total,
-    limit:           LIMIT,
-    page:            page,
-    keyword:         keyword,
-    currentCategory: categoryId
-  });
+    const deckRows = await Deck.findAll({
+      where,
+      order: [['published_at', 'DESC']],
+      limit: LIMIT,
+      offset,
+      raw: true
+    });
+
+    if (!deckRows.length) {
+      const categories = await Category.findAll({ where: { status: 'active' }, order: [['position', 'DESC']], raw: true });
+      return res.render('client/pages/explore', {
+        title: 'Khám phá — FlashLearn',
+        decks: [], categories, total, limit: LIMIT,
+        page: currentPage, keyword, currentCategory: categoryId
+      });
+    }
+
+    // Lấy tên danh mục
+    const catIds = [...new Set(deckRows.map(d => parseInt(d.category_id)))];
+    const catRows = await Category.findAll({ where: { id: { [Op.in]: catIds } }, attributes: ['id', 'name'], raw: true });
+    const catMap  = Object.fromEntries(catRows.map(c => [parseInt(c.id), c.name]));
+
+    // Lấy tên tác giả
+    const ownerIds = [...new Set(deckRows.map(d => parseInt(d.owner_id)))];
+    const userRows = await User.findAll({ where: { id: { [Op.in]: ownerIds } }, attributes: ['id', 'full_name'], raw: true });
+    const userMap  = Object.fromEntries(userRows.map(u => [parseInt(u.id), u.full_name]));
+
+    // Đếm số thẻ
+    const deckIds = deckRows.map(d => parseInt(d.id));
+    const countRows = await Card.findAll({
+      where: { deck_id: { [Op.in]: deckIds }, status: 'active' },
+      attributes: ['deck_id', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+      group: ['deck_id'],
+      raw: true
+    });
+    const countMap = Object.fromEntries(countRows.map(r => [parseInt(r.deck_id), parseInt(r.count)]));
+
+    // Kiểm tra deck đã lưu
+    const savedSet = new Set();
+    if (userId) {
+      const savedRows = await SavedDeck.findAll({
+        where: { user_id: userId, deck_id: { [Op.in]: deckIds }, status: 'active' },
+        attributes: ['deck_id'],
+        raw: true
+      });
+      savedRows.forEach(r => savedSet.add(parseInt(r.deck_id)));
+    }
+
+    const decks = deckRows.map(d => ({
+      ...d,
+      category_name: catMap[parseInt(d.category_id)] || '',
+      author_name:   userMap[parseInt(d.owner_id)]   || '',
+      card_count:    countMap[parseInt(d.id)]        || 0,
+      is_saved:      savedSet.has(parseInt(d.id))
+    }));
+
+    const categories = await Category.findAll({ where: { status: 'active' }, order: [['position', 'DESC']], raw: true });
+
+    res.render('client/pages/explore', {
+      title: 'Khám phá — FlashLearn',
+      decks, categories, total, limit: LIMIT,
+      page: currentPage, keyword, currentCategory: categoryId
+    });
+  } catch (error) {
+    res.redirect('/');
+  }
 };
 
-module.exports.detail = (req, res) => {
-  const deck = STUB_DECKS.find(d => d.id === parseInt(req.params.id)) || STUB_DECKS[0];
-  res.render('client/pages/explore-detail', {
-    title: deck.title,
-    deck:  deck,
-    cards: [
-      { front: 'abandon',     back: 'từ bỏ' },
-      { front: 'accomplish',  back: 'hoàn thành, đạt được' },
-      { front: 'ambiguous',   back: 'mơ hồ, không rõ ràng' },
-      { front: 'controversy', back: 'tranh cãi, tranh luận' },
-      { front: 'deteriorate', back: 'suy giảm, trở nên tệ hơn' },
-      { front: 'elaborate',   back: 'chi tiết, tỉ mỉ' },
-      { front: 'facilitate',  back: 'tạo điều kiện, thúc đẩy' },
-      { front: 'inevitable',  back: 'không thể tránh khỏi' },
-      { front: 'prominent',   back: 'nổi bật, quan trọng' },
-      { front: 'substantial', back: 'đáng kể, quan trọng' }
-    ]
-  });
+module.exports.detail = async (req, res) => {
+  try {
+    const userId = res.locals.user ? parseInt(res.locals.user.id) : null;
+
+    const deck = await Deck.findOne({
+      where: { id: req.params.id, visibility: 'public', status: 'active' },
+      raw: true
+    });
+    if (!deck) return res.redirect('/explore');
+
+    const category = await Category.findOne({ where: { id: deck.category_id }, attributes: ['name'], raw: true });
+    const author   = await User.findOne({ where: { id: deck.owner_id }, attributes: ['full_name'], raw: true });
+
+    const cards = await Card.findAll({
+      where: { deck_id: deck.id, status: 'active' },
+      order: [['position', 'ASC'], ['created_at', 'ASC']],
+      raw: true
+    });
+
+    let is_saved = false;
+    if (userId && parseInt(deck.owner_id) !== userId) {
+      const saved = await SavedDeck.findOne({
+        where: { user_id: userId, deck_id: deck.id, status: 'active' }
+      });
+      is_saved = !!saved;
+    }
+
+    res.render('client/pages/explore-detail', {
+      title: `${deck.title} — FlashLearn`,
+      deck: {
+        ...deck,
+        category_name: category ? category.name : '',
+        author_name:   author   ? author.full_name : '',
+        card_count:    cards.length,
+        is_saved
+      },
+      cards
+    });
+  } catch (error) {
+    res.redirect('/explore');
+  }
 };

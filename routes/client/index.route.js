@@ -14,7 +14,8 @@ router.use((req, res, next) => {
 
 router.get('/', homeController.index);
 
-router.get('/study', authMiddleware.verifyToken(), studyController.studyDue);
+router.get('/study',       authMiddleware.verifyToken(), studyController.studyDue);
+router.patch('/study/rate', authMiddleware.verifyToken(), studyController.rate);
 router.use('/dashboard', authMiddleware.verifyToken(), dashboardRoutes);
 router.use('/deck', authMiddleware.verifyToken(), deckRoutes);
 router.use('/explore', exploreRoutes);
