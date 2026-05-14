@@ -1,10 +1,11 @@
 const { Op } = require('sequelize');
-const Deck       = require('../../models/deck.model');
-const Card       = require('../../models/card.model');
-const SavedDeck  = require('../../models/savedDeck.model');
+const Deck        = require('../../models/deck.model');
+const Card        = require('../../models/card.model');
+const SavedDeck   = require('../../models/savedDeck.model');
 const QuizSession = require('../../models/quizSession.model');
 const QuizAnswer  = require('../../models/quizAnswer.model');
 
+// Xáo trộn mảng theo Fisher-Yates
 function shuffle(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -14,6 +15,7 @@ function shuffle(arr) {
   return a;
 }
 
+// Kiểm tra quyền truy cập deck: owner, deck public, hoặc đã lưu
 async function checkAccess(userId, deck) {
   if (parseInt(deck.owner_id) === userId) return true;
   if (deck.visibility === 'public') return true;
@@ -23,6 +25,7 @@ async function checkAccess(userId, deck) {
   return !!saved;
 }
 
+// Lưu kết quả một lần làm quiz (dùng chung cho cả trắc nghiệm và ghép cặp)
 async function submitQuiz(req, res, quizType) {
   try {
     const userId  = parseInt(req.user.id);
@@ -38,6 +41,7 @@ async function submitQuiz(req, res, quizType) {
     const total        = answers.length;
     const score        = total > 0 ? parseFloat((correctCount / total * 100).toFixed(2)) : 0;
 
+    // Tạo session quiz
     const attempt = await QuizSession.create({
       user_id:         userId,
       deck_id:         deckId,
@@ -50,6 +54,7 @@ async function submitQuiz(req, res, quizType) {
       submitted_at:    new Date()
     });
 
+    // Lưu từng câu trả lời
     await QuizAnswer.bulkCreate(answers.map((a, i) => ({
       attempt_id:     attempt.id,
       card_id:        a.card_id || null,
@@ -66,7 +71,7 @@ async function submitQuiz(req, res, quizType) {
   }
 }
 
-// GET /deck/quiz/choice/:id
+// Hiển thị trang quiz trắc nghiệm 4 đáp án
 module.exports.choice = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
@@ -82,8 +87,11 @@ module.exports.choice = async (req, res) => {
       where: { deck_id: deckId, status: 'active' },
       raw: true
     });
+
+    // Cần ít nhất 4 thẻ để tạo 4 đáp án
     if (cards.length < 4) return res.redirect(`/deck/detail/${deckId}`);
 
+    // Tạo câu hỏi: mỗi thẻ là 1 câu, 3 đáp án sai lấy ngẫu nhiên từ các thẻ còn lại
     const allBacks = cards.map(c => c.back);
     const questions = shuffle(cards).map(c => {
       const wrongs  = shuffle(allBacks.filter(b => b !== c.back)).slice(0, 3);
@@ -105,10 +113,10 @@ module.exports.choice = async (req, res) => {
   }
 };
 
-// POST /deck/quiz/choice/:id
+// Nộp kết quả quiz trắc nghiệm
 module.exports.choiceSubmit = (req, res) => submitQuiz(req, res, 'multiple_choice');
 
-// GET /deck/quiz/match/:id
+// Hiển thị trang quiz ghép cặp (tối đa 8 thẻ ngẫu nhiên)
 module.exports.match = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
@@ -124,8 +132,11 @@ module.exports.match = async (req, res) => {
       where: { deck_id: deckId, status: 'active' },
       raw: true
     });
+
+    // Cần ít nhất 2 thẻ để ghép cặp
     if (allCards.length < 2) return res.redirect(`/deck/detail/${deckId}`);
 
+    // Chọn ngẫu nhiên tối đa 8 thẻ
     const cards = shuffle(allCards).slice(0, 8).map(c => ({
       card_id: c.id,
       front:   c.front,
@@ -142,10 +153,10 @@ module.exports.match = async (req, res) => {
   }
 };
 
-// POST /deck/quiz/match/:id
+// Nộp kết quả quiz ghép cặp
 module.exports.matchSubmit = (req, res) => submitQuiz(req, res, 'matching');
 
-// GET /deck/quiz/result/:attemptId
+// Hiển thị trang kết quả sau khi làm quiz
 module.exports.result = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
@@ -161,6 +172,7 @@ module.exports.result = async (req, res) => {
       raw: true
     });
 
+    // Lấy từng câu trả lời để hiển thị chi tiết kết quả
     const items = await QuizAnswer.findAll({
       where: { attempt_id: attempt.id },
       order: [['position', 'ASC']],

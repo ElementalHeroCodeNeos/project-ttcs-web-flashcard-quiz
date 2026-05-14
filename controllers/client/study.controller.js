@@ -1,36 +1,41 @@
-const { Op } = require('sequelize');
+const { Op, QueryTypes } = require('sequelize');
+const sequelize    = require('../../config/database');
 const Deck         = require('../../models/deck.model');
-const Card         = require('../../models/card.model');
 const SavedDeck    = require('../../models/savedDeck.model');
 const CardProgress = require('../../models/cardProgress.model');
 const ReviewLog    = require('../../models/reviewLog.model');
 
 const TODAY = () => new Date().toISOString().slice(0, 10);
 
+// Lấy danh sách thẻ cần ôn hôm nay (thẻ mới chưa có progress + thẻ đến hạn)
 async function getDueCards(userId, deckIds) {
-  const allCards = await Card.findAll({
-    where: { deck_id: { [Op.in]: deckIds }, status: 'active' },
-    order: [['position', 'ASC'], ['created_at', 'ASC']],
-    raw: true
-  });
-  if (!allCards.length) return [];
-
-  const cardIds = allCards.map(c => parseInt(c.id));
-  const progressRows = await CardProgress.findAll({
-    where: { user_id: userId, card_id: { [Op.in]: cardIds } },
-    raw: true
-  });
-  const progressMap = Object.fromEntries(progressRows.map(p => [parseInt(p.card_id), p]));
-
   const today = TODAY();
-  return allCards
-    .filter(c => {
-      const sp = progressMap[parseInt(c.id)];
-      return !sp || sp.due_date <= today;
-    })
-    .map(c => ({ ...c, studyProgress: progressMap[parseInt(c.id)] || null }));
+
+  // JOIN card_progress để lọc thẻ đến hạn ngay trong SQL
+  const rows = await sequelize.query(`
+    SELECT c.*,
+           cp.id AS sp_id, cp.due_date, cp.repetitions, cp.interval_days,
+           cp.ease_factor, cp.lapse_count, cp.is_difficult, cp.last_reviewed_at
+    FROM cards c
+    LEFT JOIN card_progress cp ON cp.card_id = c.id AND cp.user_id = :userId
+    WHERE c.deck_id IN (:deckIds) AND c.status = 'active'
+      AND (cp.id IS NULL OR cp.due_date <= :today)
+    ORDER BY c.position ASC, c.created_at ASC
+  `, { replacements: { userId, deckIds, today }, type: QueryTypes.SELECT });
+
+  // Reshape: tách riêng studyProgress để view dùng card.studyProgress
+  return rows.map(c => ({
+    ...c,
+    studyProgress: c.sp_id !== null ? {
+      id: c.sp_id, due_date: c.due_date, repetitions: c.repetitions,
+      interval_days: c.interval_days, ease_factor: c.ease_factor,
+      lapse_count: c.lapse_count, is_difficult: c.is_difficult,
+      last_reviewed_at: c.last_reviewed_at
+    } : null
+  }));
 }
 
+// Ôn tập một bộ thẻ cụ thể (tất cả thẻ, bao gồm thẻ chưa đến hạn)
 module.exports.study = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
@@ -42,6 +47,7 @@ module.exports.study = async (req, res) => {
     });
     if (!deck) return res.redirect('/deck');
 
+    // Kiểm tra quyền truy cập: phải là owner hoặc đã lưu deck
     const isOwner = parseInt(deck.owner_id) === userId;
     if (!isOwner) {
       const saved = await SavedDeck.findOne({
@@ -50,18 +56,26 @@ module.exports.study = async (req, res) => {
       if (!saved) return res.redirect('/deck');
     }
 
-    const allCards = await Card.findAll({
-      where: { deck_id: deckId, status: 'active' },
-      order: [['position', 'ASC'], ['created_at', 'ASC']],
-      raw: true
-    });
-    const cardIds = allCards.map(c => parseInt(c.id));
-    const progressRows = cardIds.length ? await CardProgress.findAll({
-      where: { user_id: userId, card_id: { [Op.in]: cardIds } },
-      raw: true
-    }) : [];
-    const progressMap = Object.fromEntries(progressRows.map(p => [parseInt(p.card_id), p]));
-    const cards = allCards.map(c => ({ ...c, studyProgress: progressMap[parseInt(c.id)] || null }));
+    // Lấy tất cả thẻ kèm tiến độ học của user bằng JOIN
+    const rows = await sequelize.query(`
+      SELECT c.*,
+             cp.id AS sp_id, cp.due_date, cp.repetitions, cp.interval_days,
+             cp.ease_factor, cp.lapse_count, cp.is_difficult, cp.last_reviewed_at
+      FROM cards c
+      LEFT JOIN card_progress cp ON cp.card_id = c.id AND cp.user_id = :userId
+      WHERE c.deck_id = :deckId AND c.status = 'active'
+      ORDER BY c.position ASC, c.created_at ASC
+    `, { replacements: { userId, deckId }, type: QueryTypes.SELECT });
+
+    const cards = rows.map(c => ({
+      ...c,
+      studyProgress: c.sp_id !== null ? {
+        id: c.sp_id, due_date: c.due_date, repetitions: c.repetitions,
+        interval_days: c.interval_days, ease_factor: c.ease_factor,
+        lapse_count: c.lapse_count, is_difficult: c.is_difficult,
+        last_reviewed_at: c.last_reviewed_at
+      } : null
+    }));
 
     res.render('client/pages/study', {
       title: `${deck.title} — FlashLearn`,
@@ -74,10 +88,12 @@ module.exports.study = async (req, res) => {
   }
 };
 
+// Ôn tập tất cả thẻ đến hạn hôm nay trong toàn bộ deck của user
 module.exports.studyDue = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
 
+    // Gom tất cả deck user có quyền (tự tạo + đã lưu)
     const ownedDecks = await Deck.findAll({
       where: { owner_id: userId, status: { [Op.ne]: 'deleted' } },
       attributes: ['id'],
@@ -107,6 +123,7 @@ module.exports.studyDue = async (req, res) => {
   }
 };
 
+// Ghi nhận kết quả ôn tập một thẻ, tính lịch ôn tiếp theo theo thuật toán SM-2
 module.exports.rate = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
@@ -119,6 +136,7 @@ module.exports.rate = async (req, res) => {
     const card = await Card.findOne({ where: { id: card_id, status: 'active' } });
     if (!card) return res.json({ code: 'error' });
 
+    // Tạo progress nếu chưa có (lần đầu học thẻ này)
     const [sp] = await CardProgress.findOrCreate({
       where: { user_id: userId, card_id: parseInt(card_id) },
       defaults: {
@@ -133,6 +151,7 @@ module.exports.rate = async (req, res) => {
     const prevDue      = sp.due_date;
     const reps         = sp.repetitions;
 
+    // Tính interval mới theo SM-2: good giữ ease, easy tăng ease và interval
     let newInterval, newEase;
     if (rating === 'good') {
       if (reps === 0)      newInterval = 1;
@@ -148,6 +167,7 @@ module.exports.rate = async (req, res) => {
     nextDue.setDate(nextDue.getDate() + newInterval);
     const nextDueStr = nextDue.toISOString().slice(0, 10);
 
+    // Cập nhật tiến độ học
     await sp.update({
       repetitions:      reps + 1,
       interval_days:    newInterval,
@@ -157,6 +177,7 @@ module.exports.rate = async (req, res) => {
       updated_at:       new Date()
     });
 
+    // Ghi log lịch sử ôn tập
     await ReviewLog.create({
       study_progress_id:      sp.id,
       rating,

@@ -2,11 +2,13 @@ const { Op } = require('sequelize');
 const Card = require('../../models/card.model');
 const Deck = require('../../models/deck.model');
 
+// Thêm thẻ mới vào bộ thẻ (chỉ chủ sở hữu)
 module.exports.createPost = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
     const deckId = parseInt(req.params.id);
 
+    // Kiểm tra deck tồn tại và thuộc về user
     const deck = await Deck.findOne({
       where: { id: deckId, owner_id: userId, status: { [Op.ne]: 'deleted' } }
     });
@@ -14,6 +16,7 @@ module.exports.createPost = async (req, res) => {
 
     const { front, back } = req.body;
 
+    // Position = số thẻ hiện tại + 1 để xếp cuối danh sách
     const count = await Card.count({ where: { deck_id: deckId, status: 'active' } });
 
     const card = await Card.create({
@@ -31,6 +34,7 @@ module.exports.createPost = async (req, res) => {
   }
 };
 
+// Cập nhật nội dung mặt trước và mặt sau của thẻ (chỉ chủ sở hữu)
 module.exports.editPatch = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
@@ -55,6 +59,7 @@ module.exports.editPatch = async (req, res) => {
   }
 };
 
+// Xoá mềm thẻ (chỉ chủ sở hữu)
 module.exports.deleteDelete = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);

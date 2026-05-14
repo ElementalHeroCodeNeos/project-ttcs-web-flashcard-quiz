@@ -8,6 +8,7 @@ const User       = require('../../models/user.model');
 
 const LIMIT = 9;
 
+// Danh sách bộ thẻ công khai, có lọc theo danh mục và từ khoá
 module.exports.index = async (req, res) => {
   try {
     const userId     = res.locals.user ? parseInt(res.locals.user.id) : null;
@@ -15,6 +16,7 @@ module.exports.index = async (req, res) => {
     const categoryId = req.query.category_id || '';
     const page       = parseInt(req.query.page) || 1;
 
+    // Build điều kiện WHERE động theo filter
     const conditions   = ["d.visibility = 'public'", "d.status = 'active'"];
     const replacements = { userId: userId || 0 };
 
@@ -29,6 +31,7 @@ module.exports.index = async (req, res) => {
 
     const where = conditions.join(' AND ');
 
+    // Đếm tổng để tính phân trang
     const [{ total }] = await sequelize.query(
       `SELECT COUNT(*) AS total FROM decks d WHERE ${where}`,
       { replacements, type: QueryTypes.SELECT }
@@ -41,6 +44,7 @@ module.exports.index = async (req, res) => {
     replacements.limit  = LIMIT;
     replacements.offset = (currentPage - 1) * LIMIT;
 
+    // Lấy danh sách deck kèm danh mục, tác giả, số thẻ, trạng thái đã lưu
     const decks = await sequelize.query(`
       SELECT d.*,
              c.name      AS category_name,
@@ -60,6 +64,7 @@ module.exports.index = async (req, res) => {
       LIMIT :limit OFFSET :offset
     `, { replacements, type: QueryTypes.SELECT });
 
+    // Lấy danh sách danh mục cho bộ lọc
     const categories = await Category.findAll({
       where: { status: 'active' },
       order: [['position', 'DESC']],
@@ -77,10 +82,12 @@ module.exports.index = async (req, res) => {
   }
 };
 
+// Chi tiết một bộ thẻ công khai
 module.exports.detail = async (req, res) => {
   try {
     const userId = res.locals.user ? parseInt(res.locals.user.id) : null;
 
+    // Chỉ hiển thị deck public và đang active
     const deck = await Deck.findOne({
       where: { id: req.params.id, visibility: 'public', status: 'active' },
       raw: true
@@ -90,12 +97,14 @@ module.exports.detail = async (req, res) => {
     const category = await Category.findOne({ where: { id: deck.category_id }, attributes: ['name'], raw: true });
     const author   = await User.findOne({ where: { id: deck.owner_id }, attributes: ['full_name'], raw: true });
 
+    // Lấy danh sách thẻ theo thứ tự position
     const cards = await Card.findAll({
       where: { deck_id: deck.id, status: 'active' },
       order: [['position', 'ASC'], ['created_at', 'ASC']],
       raw: true
     });
 
+    // Kiểm tra user đã lưu deck này chưa (chỉ check nếu không phải chủ sở hữu)
     let is_saved = false;
     if (userId && parseInt(deck.owner_id) !== userId) {
       const saved = await SavedDeck.findOne({

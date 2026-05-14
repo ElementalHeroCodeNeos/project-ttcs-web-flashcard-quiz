@@ -9,6 +9,7 @@ const QuizSession  = require('../../models/quizSession.model');
 
 const DAY_NAMES = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
+// Trang dashboard chính của user: thống kê, biểu đồ, streak, deck gần nhất
 module.exports.index = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
@@ -16,7 +17,7 @@ module.exports.index = async (req, res) => {
     const hour   = new Date().getHours();
     const greeting = hour < 12 ? 'buổi sáng' : hour < 18 ? 'buổi chiều' : 'buổi tối';
 
-    // ── Deck IDs user có quyền truy cập ──────────────────────────────
+    // ── Deck IDs user có quyền truy cập (tự tạo + đã lưu) ───────────
     const ownedDecks = await Deck.findAll({
       where: { owner_id: userId, status: { [Op.ne]: 'deleted' } },
       attributes: ['id', 'title', 'category_id'],
@@ -32,7 +33,7 @@ module.exports.index = async (req, res) => {
     const deckCount    = ownedDecks.length + savedDeckIds.length;
     const allDeckIds   = [...ownedDecks.map(d => parseInt(d.id)), ...savedDeckIds];
 
-    // ── Card IDs từ các deck ─────────────────────────────────────────
+    // ── Card IDs từ tất cả deck user có quyền ───────────────────────
     let allCardIds = [];
     if (allDeckIds.length) {
       const cardRows = await Card.findAll({
@@ -43,7 +44,7 @@ module.exports.index = async (req, res) => {
       allCardIds = cardRows.map(c => parseInt(c.id));
     }
 
-    // ── study_progress IDs của user (cho review_logs) ────────────────
+    // ── Progress IDs của user (dùng để query review_logs) ───────────
     const progressRows = await CardProgress.findAll({
       where: { user_id: userId },
       attributes: ['id'],
@@ -51,26 +52,31 @@ module.exports.index = async (req, res) => {
     });
     const progressIds = progressRows.map(r => parseInt(r.id));
 
-    // ── Stats đơn giản ───────────────────────────────────────────────
+    // ── Thống kê tổng quan ───────────────────────────────────────────
+
+    // Số thẻ chưa học lần nào
     const progressedCount = allCardIds.length ? await CardProgress.count({
       where: { user_id: userId, card_id: { [Op.in]: allCardIds } }
     }) : 0;
     const newCardCount = allCardIds.length - progressedCount;
 
+    // Số thẻ cần ôn hôm nay (đến hạn + thẻ mới)
     const dueProgressCount = allCardIds.length ? await CardProgress.count({
       where: { user_id: userId, card_id: { [Op.in]: allCardIds }, due_date: { [Op.lte]: today } }
     }) : 0;
     const dueCount = dueProgressCount + newCardCount;
 
+    // Tổng số thẻ đã học ít nhất 1 lần
     const totalStudied = await CardProgress.count({
       where: { user_id: userId, repetitions: { [Op.gt]: 0 } }
     });
 
+    // Số thẻ khó (user đánh dấu)
     const hardCardCount = await CardProgress.count({
       where: { user_id: userId, is_difficult: true }
     });
 
-    // avgAccuracy từ quiz_attempts
+    // Độ chính xác trung bình từ các lần làm quiz
     let avgAccuracy = 0;
     const quizRows = await QuizSession.findAll({
       where: { user_id: userId, status: 'submitted', total_questions: { [Op.gt]: 0 } },
@@ -83,13 +89,13 @@ module.exports.index = async (req, res) => {
       avgAccuracy = Math.round(sumCorrect / sumTotal * 100);
     }
 
-    // todayStudied: số lần review hôm nay
+    // Số lần ôn tập hôm nay
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const todayStudied = progressIds.length ? await ReviewLog.count({
       where: { study_progress_id: { [Op.in]: progressIds }, reviewed_at: { [Op.gte]: todayStart } }
     }) : 0;
 
-    // ── Weekly bar chart (7 ngày) ────────────────────────────────────
+    // ── Biểu đồ ôn tập 7 ngày gần nhất ─────────────────────────────
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
     sevenDaysAgo.setHours(0, 0, 0, 0);
@@ -118,7 +124,7 @@ module.exports.index = async (req, res) => {
     const weeklyData  = { labels, data };
     const weeklyTotal = data.reduce((a, b) => a + b, 0);
 
-    // ── Streak ───────────────────────────────────────────────────────
+    // ── Streak: số ngày ôn tập liên tiếp (tính trong 30 ngày gần nhất) ─
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
     thirtyDaysAgo.setHours(0, 0, 0, 0);
@@ -134,6 +140,7 @@ module.exports.index = async (req, res) => {
       sRows.forEach(r => studiedDates.add(r.date));
     }
 
+    // Đếm streak từ hôm nay ngược về quá khứ
     let streak = 0;
     const checkDay = new Date();
     if (!studiedDates.has(today)) checkDay.setDate(checkDay.getDate() - 1);
@@ -144,6 +151,7 @@ module.exports.index = async (req, res) => {
       checkDay.setDate(checkDay.getDate() - 1);
     }
 
+    // Build mảng 14 ngày gần nhất để hiển thị lịch streak
     const streakDays = [];
     for (let i = 13; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i);
@@ -155,7 +163,7 @@ module.exports.index = async (req, res) => {
       });
     }
 
-    // ── Recent decks (4 deck gần nhất, batch queries) ────────────────
+    // ── 4 bộ thẻ truy cập gần nhất, kèm tiến độ học ─────────────────
     const recentDeckRows = allDeckIds.length ? await sequelize.query(`
       SELECT d.*, c.name AS category_name
       FROM decks d
@@ -169,6 +177,7 @@ module.exports.index = async (req, res) => {
     if (recentDeckRows.length) {
       const recentDeckIds = recentDeckRows.map(d => parseInt(d.id));
 
+      // Lấy tất cả thẻ của 4 deck, nhóm theo deck_id
       const recentCardRows = await Card.findAll({
         where: { deck_id: { [Op.in]: recentDeckIds }, status: 'active' },
         attributes: ['id', 'deck_id'],
@@ -183,6 +192,7 @@ module.exports.index = async (req, res) => {
 
       const recentCardIds = recentCardRows.map(c => parseInt(c.id));
 
+      // Thẻ đến hạn ôn hôm nay
       const dueRows = recentCardIds.length ? await CardProgress.findAll({
         where: { user_id: userId, card_id: { [Op.in]: recentCardIds }, due_date: { [Op.lte]: today } },
         attributes: ['card_id'],
@@ -190,6 +200,7 @@ module.exports.index = async (req, res) => {
       }) : [];
       const dueSet = new Set(dueRows.map(r => parseInt(r.card_id)));
 
+      // Thẻ đã học ít nhất 1 lần (tính % tiến độ)
       const learnedRows = recentCardIds.length ? await CardProgress.findAll({
         where: { user_id: userId, card_id: { [Op.in]: recentCardIds }, repetitions: { [Op.gt]: 0 } },
         attributes: ['card_id'],

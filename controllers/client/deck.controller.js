@@ -7,17 +7,20 @@ const SavedDeck = require('../../models/savedDeck.model');
 
 const LIMIT = 12;
 
+// Subquery kiểm tra user đã lưu deck chưa, dùng lại ở WHERE và SELECT
 const SAVED_EXISTS = `EXISTS (
   SELECT 1 FROM saved_decks sd
   WHERE sd.deck_id = d.id AND sd.user_id = :userId AND sd.status = 'active'
 )`;
 
+// Danh sách bộ thẻ của user (tự tạo + đã lưu), có lọc và phân trang
 module.exports.list = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
     const { search = '', category_id = '', visibility = '', type = '' } = req.query;
     const page = parseInt(req.query.page) || 1;
 
+    // Build điều kiện WHERE theo loại xem (tất cả / tự tạo / đã lưu)
     const conditions   = ["d.status != 'deleted'"];
     const replacements = { userId };
 
@@ -44,6 +47,7 @@ module.exports.list = async (req, res) => {
 
     const where = conditions.join(' AND ');
 
+    // Đếm tổng để tính phân trang
     const [{ total }] = await sequelize.query(
       `SELECT COUNT(*) AS total FROM decks d WHERE ${where}`,
       { replacements, type: QueryTypes.SELECT }
@@ -56,6 +60,7 @@ module.exports.list = async (req, res) => {
     replacements.limit  = LIMIT;
     replacements.offset = (currentPage - 1) * LIMIT;
 
+    // Lấy deck kèm tên danh mục, số thẻ, trạng thái owner và đã lưu
     const deckRows = await sequelize.query(`
       SELECT d.*,
              c.name AS category_name,
@@ -71,6 +76,7 @@ module.exports.list = async (req, res) => {
       LIMIT :limit OFFSET :offset
     `, { replacements, type: QueryTypes.SELECT });
 
+    // Reshape để Pug dùng deck.category.name, deck.cardCount, deck.isOwner, deck.isSaved
     const decks = deckRows.map(d => ({
       ...d,
       category:  { name: d.category_name },
@@ -79,6 +85,7 @@ module.exports.list = async (req, res) => {
       isSaved:   d.is_saved
     }));
 
+    // Danh sách danh mục cho bộ lọc
     const categories = await Category.findAll({
       where: { status: 'active' },
       order: [['position', 'DESC']],
@@ -100,6 +107,7 @@ module.exports.list = async (req, res) => {
   }
 };
 
+// Hiển thị form tạo bộ thẻ mới
 module.exports.create = async (req, res) => {
   try {
     const categories = await Category.findAll({
@@ -117,6 +125,7 @@ module.exports.create = async (req, res) => {
   }
 };
 
+// Xử lý tạo bộ thẻ mới
 module.exports.createPost = async (req, res) => {
   try {
     const { title, description, category_id, visibility } = req.body;
@@ -139,6 +148,7 @@ module.exports.createPost = async (req, res) => {
   }
 };
 
+// Hiển thị form chỉnh sửa bộ thẻ (chỉ chủ sở hữu)
 module.exports.edit = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
@@ -165,6 +175,7 @@ module.exports.edit = async (req, res) => {
   }
 };
 
+// Xử lý cập nhật thông tin bộ thẻ
 module.exports.editPost = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
@@ -175,7 +186,7 @@ module.exports.editPost = async (req, res) => {
     });
     if (!deck) return res.json({ code: 'error', message: 'Không tìm thấy bộ thẻ!' });
 
-    const nowPublic = visibility === 'public';
+    const nowPublic  = visibility === 'public';
     const wasPrivate = deck.visibility === 'private';
 
     await deck.update({
@@ -183,6 +194,7 @@ module.exports.editPost = async (req, res) => {
       description:  description || null,
       category_id:  parseInt(category_id),
       visibility:   nowPublic ? 'public' : 'private',
+      // Chỉ set published_at lần đầu chuyển sang public
       published_at: nowPublic && wasPrivate ? new Date() : deck.published_at,
       updated_at:   new Date()
     });
@@ -193,6 +205,7 @@ module.exports.editPost = async (req, res) => {
   }
 };
 
+// Xoá mềm bộ thẻ (chỉ chủ sở hữu)
 module.exports.deleteDelete = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
@@ -208,6 +221,7 @@ module.exports.deleteDelete = async (req, res) => {
   }
 };
 
+// Chi tiết bộ thẻ: hiển thị thẻ, cho phép owner xem private
 module.exports.detail = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
@@ -234,12 +248,13 @@ module.exports.detail = async (req, res) => {
       raw: true
     });
 
+    // Kiểm tra đã lưu chưa (chỉ check nếu không phải owner)
     let isSaved = false;
     if (!isOwner) {
       const saved = await SavedDeck.findOne({
         where: { user_id: userId, deck_id: deck.id, status: 'active' }
       });
-      isSaved = !!saved;
+      isSaved = saved !== null;
     }
 
     res.render('client/pages/deck-detail', {
@@ -255,6 +270,7 @@ module.exports.detail = async (req, res) => {
   }
 };
 
+// Lưu bộ thẻ công khai vào thư viện cá nhân
 module.exports.savePost = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
@@ -272,8 +288,10 @@ module.exports.savePost = async (req, res) => {
     const existing = await SavedDeck.findOne({ where: { user_id: userId, deck_id: deckId } });
 
     if (!existing) {
+      // Lưu lần đầu
       await SavedDeck.create({ user_id: userId, deck_id: deckId, saved_at: new Date() });
     } else if (existing.status === 'removed') {
+      // Khôi phục nếu đã từng xoá
       await existing.update({ status: 'active', removed_at: null });
     } else {
       return res.json({ code: 'error', message: 'Bộ thẻ đã có trong thư viện!' });

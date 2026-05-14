@@ -1,14 +1,17 @@
 const { QueryTypes } = require('sequelize');
 const sequelize = require('../../config/database');
 
+// Hiển thị trang chủ cho guest (user đã đăng nhập → redirect dashboard)
 module.exports.index = async (req, res) => {
   try {
     if (res.locals.user) {
       return res.redirect('/dashboard');
     }
 
+    // Số liệu thống kê hiển thị trên hero section (stub data)
     const stats = { deckCount: 15000, userCount: 150000, cardCount: 5000000 };
 
+    // Lấy 8 bộ thẻ công khai mới nhất kèm danh mục, tác giả, số thẻ
     const featuredDecks = await sequelize.query(`
       SELECT d.*,
              c.name       AS category_name,
