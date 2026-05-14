@@ -1,8 +1,10 @@
 (function () {
+  // Dữ liệu thẻ được nhúng từ server vào thẻ <script id="cardsData"> trong Pug
   const cards = JSON.parse(document.getElementById('cardsData').textContent);
+  // queue là bản sao làm việc — slice() để không mutate mảng gốc
   let queue = cards.slice();
   const total = cards.length;
-  let done = 0;
+  let done = 0;           // chỉ đếm thẻ đã thoát khỏi queue (Good/Easy), không đếm Again/Hard
   let flipped = false;
   let currentRating = null;
 
@@ -22,6 +24,7 @@
   const elProgressPct   = document.getElementById('progressPct');
   const elProgressFill  = document.getElementById('progressFill');
   const elBtnRow        = document.querySelector('.study-btn-row');
+
   function loadCard() {
     if (queue.length === 0) {
       updateProgress();
@@ -44,6 +47,7 @@
     elBack.classList.remove('show');
     elSideLabel.textContent = 'Mặt trước';
     elFlipBtn.classList.remove('hidden');
+    // Khóa nút Tiếp theo cho đến khi user chọn rating
     elNextBtn.disabled = true;
     elRatingWrap.classList.remove('show');
     elRatingBtns.classList.remove('rated');
@@ -67,11 +71,13 @@
     elBack.classList.add('show');
     elSideLabel.textContent = 'Mặt sau';
     elFlipBtn.classList.add('hidden');
+    // Hiện các nút rating chỉ sau khi đã lật — tránh user đánh giá khi chưa thấy mặt sau
     elRatingWrap.classList.add('show');
     elHint.style.display = 'none';
   }
 
   function rate(rating) {
+    // Guard: chỉ cho phép đánh giá một lần sau khi đã lật thẻ
     if (!flipped || currentRating) return;
     currentRating = rating;
     elRatingBtns.classList.add('rated');
@@ -79,6 +85,8 @@
     elNextBtn.disabled = false;
   }
 
+  // Thuật toán SM-2 biến thể — cập nhật trực tiếp vào card.studyProgress
+  // để các lần Again/Hard liên tiếp tích lũy đúng (interval/ease thay đổi theo từng lần)
   function applySM2(card, rating) {
     let sp = card.studyProgress || {};
     let interval   = sp.interval_days || 0;
@@ -109,6 +117,7 @@
       ease_factor:   ease,
       repetitions:   reps,
       lapse_count:   lapses,
+      // is_difficult không lưu riêng mà tính lại mỗi lần từ lapse_count
       is_difficult:  lapses >= 3
     };
   }
@@ -121,8 +130,11 @@
     applySM2(card, currentRating);
 
     if (currentRating === 'again' || currentRating === 'hard') {
+      // Again/Hard: đẩy thẻ xuống cuối queue, xử lý in-memory, không gọi API
+      // SM-2 đã được cập nhật trong card.studyProgress để lần sau tính đúng
       queue.push(card);
     } else {
+      // Good/Easy: thẻ thoát khỏi queue, lưu tiến độ lên server (fire-and-forget)
       done++;
       fetch('/study/rate', {
         method: 'PATCH',
@@ -135,6 +147,7 @@
   }
 
   elFlipBtn.addEventListener('click', flip);
+  // Click vào bất kỳ chỗ nào trên thẻ cũng lật được (UX tiện hơn)
   elWrap.addEventListener('click', flip);
   elNextBtn.addEventListener('click', next);
 

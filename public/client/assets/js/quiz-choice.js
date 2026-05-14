@@ -1,10 +1,12 @@
 (function () {
+  // Dữ liệu câu hỏi (gồm answer_options 4 đáp án) được nhúng từ server
   const questions = JSON.parse(document.getElementById('questionsData').textContent);
   const deckId    = document.getElementById('deckId').value;
   const letters   = ['A', 'B', 'C', 'D'];
 
   let current  = 0;
   let answered = false;
+  // Tích lũy toàn bộ câu trả lời để gửi một lần khi hết quiz (batch submit)
   const answers = [];
 
   const elQuestionLabel = document.getElementById('questionLabel');
@@ -30,6 +32,7 @@
     elNextBtn.classList.remove('show');
     answered = false;
 
+    // Render lại toàn bộ đáp án mỗi câu thay vì cập nhật từng ô
     elChoicesWrap.innerHTML = '';
     q.answer_options.forEach(function (option, i) {
       const btn = document.createElement('button');
@@ -46,11 +49,13 @@
   }
 
   function selectChoice(el, option, q) {
+    // Guard: mỗi câu chỉ cho phép chọn một lần
     if (answered) return;
     answered = true;
 
     const isCorrect = option === q.correct_answer;
 
+    // Disable tất cả đáp án và highlight đáp án đúng (dù user chọn sai)
     elChoicesWrap.querySelectorAll('.choice').forEach(function (btn) {
       btn.classList.add('disabled');
       const text = btn.querySelector('.choice-text').textContent;
@@ -79,6 +84,7 @@
       is_correct:     isCorrect
     });
 
+    // Câu cuối đổi nhãn nút thành "Nộp bài" thay vì "Câu tiếp theo →"
     const isLast = current === questions.length - 1;
     elNextBtn.textContent = isLast ? 'Nộp bài' : 'Câu tiếp theo →';
     elNextBtn.classList.add('show');
@@ -94,6 +100,7 @@
   }
 
   function submit() {
+    // Disable nút ngay để tránh double-submit khi mạng chậm
     elNextBtn.disabled = true;
     fetch('/deck/quiz/choice/' + deckId, {
       method:  'POST',
