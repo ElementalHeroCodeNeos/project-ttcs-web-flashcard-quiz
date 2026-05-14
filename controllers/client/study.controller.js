@@ -1,6 +1,7 @@
 const { Op, QueryTypes } = require('sequelize');
 const sequelize    = require('../../config/database');
 const Deck         = require('../../models/deck.model');
+const Card         = require('../../models/card.model');
 const SavedDeck    = require('../../models/savedDeck.model');
 const CardProgress = require('../../models/cardProgress.model');
 const ReviewLog    = require('../../models/reviewLog.model');
@@ -11,13 +12,13 @@ const TODAY = () => new Date().toISOString().slice(0, 10);
 async function getDueCards(userId, deckIds) {
   const today = TODAY();
 
-  // JOIN card_progress để lọc thẻ đến hạn ngay trong SQL
+  // JOIN study_progress để lọc thẻ đến hạn ngay trong SQL
   const rows = await sequelize.query(`
     SELECT c.*,
            cp.id AS sp_id, cp.due_date, cp.repetitions, cp.interval_days,
            cp.ease_factor, cp.lapse_count, cp.is_difficult, cp.last_reviewed_at
     FROM cards c
-    LEFT JOIN card_progress cp ON cp.card_id = c.id AND cp.user_id = :userId
+    LEFT JOIN study_progress cp ON cp.card_id = c.id AND cp.user_id = :userId
     WHERE c.deck_id IN (:deckIds) AND c.status = 'active'
       AND (cp.id IS NULL OR cp.due_date <= :today)
     ORDER BY c.position ASC, c.created_at ASC
@@ -62,7 +63,7 @@ module.exports.study = async (req, res) => {
              cp.id AS sp_id, cp.due_date, cp.repetitions, cp.interval_days,
              cp.ease_factor, cp.lapse_count, cp.is_difficult, cp.last_reviewed_at
       FROM cards c
-      LEFT JOIN card_progress cp ON cp.card_id = c.id AND cp.user_id = :userId
+      LEFT JOIN study_progress cp ON cp.card_id = c.id AND cp.user_id = :userId
       WHERE c.deck_id = :deckId AND c.status = 'active'
       ORDER BY c.position ASC, c.created_at ASC
     `, { replacements: { userId, deckId }, type: QueryTypes.SELECT });
