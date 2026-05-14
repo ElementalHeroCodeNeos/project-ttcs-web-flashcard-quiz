@@ -1,6 +1,7 @@
 const { Op, QueryTypes } = require('sequelize');
 const sequelize = require('../../config/database');
 const Deck      = require('../../models/deck.model');
+const Card      = require('../../models/card.model');
 const Category  = require('../../models/category.model');
 const SavedDeck = require('../../models/savedDeck.model');
 
