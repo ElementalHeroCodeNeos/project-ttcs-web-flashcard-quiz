@@ -1,11 +1,15 @@
-const { Op } = require('sequelize');
+const { Op, QueryTypes } = require('sequelize');
 const sequelize = require('../../config/database');
-const Deck = require('../../models/deck.model');
-const Card = require('../../models/card.model');
-const Category = require('../../models/category.model');
+const Deck      = require('../../models/deck.model');
+const Category  = require('../../models/category.model');
 const SavedDeck = require('../../models/savedDeck.model');
 
 const LIMIT = 12;
+
+const SAVED_EXISTS = `EXISTS (
+  SELECT 1 FROM saved_decks sd
+  WHERE sd.deck_id = d.id AND sd.user_id = :userId AND sd.status = 'active'
+)`;
 
 module.exports.list = async (req, res) => {
   try {
@@ -13,78 +17,65 @@ module.exports.list = async (req, res) => {
     const { search = '', category_id = '', visibility = '', type = '' } = req.query;
     const page = parseInt(req.query.page) || 1;
 
-    // Lấy danh sách deck đã lưu của user
-    const savedRows = await SavedDeck.findAll({
-      where: { user_id: userId, status: 'active' },
-      attributes: ['deck_id'],
-      raw: true
-    });
-    const savedIds = savedRows.map(r => parseInt(r.deck_id));
+    const conditions   = ["d.status != 'deleted'"];
+    const replacements = { userId };
 
-    // Build where theo type
-    const where = { status: { [Op.ne]: 'deleted' } };
     if (type === 'created') {
-      where.owner_id = userId;
+      conditions.push('d.owner_id = :userId');
     } else if (type === 'saved') {
-      where.id = { [Op.in]: savedIds.length ? savedIds : [0] };
+      conditions.push(SAVED_EXISTS);
     } else {
-      if (savedIds.length > 0) {
-        where[Op.or] = [{ owner_id: userId }, { id: { [Op.in]: savedIds } }];
-      } else {
-        where.owner_id = userId;
-      }
+      conditions.push(`(d.owner_id = :userId OR ${SAVED_EXISTS})`);
     }
 
-    if (category_id) where.category_id = parseInt(category_id);
-    if (visibility)  where.visibility = visibility;
-    if (search)      where.title = { [Op.iLike]: `%${search}%` };
+    if (category_id) {
+      conditions.push('d.category_id = :categoryId');
+      replacements.categoryId = parseInt(category_id);
+    }
+    if (visibility) {
+      conditions.push('d.visibility = :visibility');
+      replacements.visibility = visibility;
+    }
+    if (search) {
+      conditions.push('d.title ILIKE :search');
+      replacements.search = `%${search}%`;
+    }
 
-    // Phân trang
-    const total = await Deck.count({ where });
-    const totalPages = Math.ceil(total / LIMIT) || 1;
+    const where = conditions.join(' AND ');
+
+    const [{ total }] = await sequelize.query(
+      `SELECT COUNT(*) AS total FROM decks d WHERE ${where}`,
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    const totalRecord = parseInt(total);
+    const totalPages  = Math.ceil(totalRecord / LIMIT) || 1;
     const currentPage = Math.min(page, totalPages);
-    const offset = (currentPage - 1) * LIMIT;
 
-    const deckRows = await Deck.findAll({
-      where,
-      order: [['created_at', 'DESC']],
-      limit: LIMIT,
-      offset,
-      raw: true
-    });
+    replacements.limit  = LIMIT;
+    replacements.offset = (currentPage - 1) * LIMIT;
 
-    // Lấy tên danh mục
-    const catIds = [...new Set(deckRows.map(d => parseInt(d.category_id)))];
-    const catMap = {};
-    if (catIds.length > 0) {
-      const catRows = await Category.findAll({
-        where: { id: { [Op.in]: catIds } },
-        attributes: ['id', 'name'],
-        raw: true
-      });
-      catRows.forEach(c => { catMap[parseInt(c.id)] = c.name; });
-    }
+    const deckRows = await sequelize.query(`
+      SELECT d.*,
+             c.name AS category_name,
+             COUNT(DISTINCT ca.id) AS card_count,
+             (d.owner_id = :userId) AS is_owner,
+             ${SAVED_EXISTS} AS is_saved
+      FROM decks d
+      JOIN categories c  ON c.id = d.category_id
+      LEFT JOIN cards ca ON ca.deck_id = d.id AND ca.status = 'active'
+      WHERE ${where}
+      GROUP BY d.id, c.name
+      ORDER BY d.created_at DESC
+      LIMIT :limit OFFSET :offset
+    `, { replacements, type: QueryTypes.SELECT });
 
-    // Đếm số thẻ của mỗi deck
-    const deckIds = deckRows.map(d => parseInt(d.id));
-    const countMap = {};
-    if (deckIds.length > 0) {
-      const countRows = await Card.findAll({
-        where: { deck_id: { [Op.in]: deckIds }, status: 'active' },
-        attributes: ['deck_id', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-        group: ['deck_id'],
-        raw: true
-      });
-      countRows.forEach(r => { countMap[parseInt(r.deck_id)] = parseInt(r.count); });
-    }
-
-    const savedSet = new Set(savedIds);
     const decks = deckRows.map(d => ({
       ...d,
-      category: { name: catMap[parseInt(d.category_id)] || '' },
-      cardCount: countMap[parseInt(d.id)] || 0,
-      isOwner: parseInt(d.owner_id) === userId,
-      isSaved: savedSet.has(parseInt(d.id))
+      category:  { name: d.category_name },
+      cardCount: parseInt(d.card_count),
+      isOwner:   d.is_owner,
+      isSaved:   d.is_saved
     }));
 
     const categories = await Category.findAll({
@@ -98,7 +89,7 @@ module.exports.list = async (req, res) => {
       currentPage: 'deck',
       decks,
       categories,
-      total,
+      total: totalRecord,
       totalPages,
       page: currentPage,
       query: req.query

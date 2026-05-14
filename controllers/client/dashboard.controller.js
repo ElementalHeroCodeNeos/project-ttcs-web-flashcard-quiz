@@ -1,8 +1,7 @@
-const { Op } = require('sequelize');
+const { Op, QueryTypes } = require('sequelize');
 const sequelize    = require('../../config/database');
 const Deck         = require('../../models/deck.model');
 const Card         = require('../../models/card.model');
-const Category     = require('../../models/category.model');
 const SavedDeck    = require('../../models/savedDeck.model');
 const CardProgress = require('../../models/cardProgress.model');
 const ReviewLog    = require('../../models/reviewLog.model');
@@ -157,24 +156,18 @@ module.exports.index = async (req, res) => {
     }
 
     // ── Recent decks (4 deck gần nhất, batch queries) ────────────────
-    const recentDeckRows = allDeckIds.length ? await Deck.findAll({
-      where: { id: { [Op.in]: allDeckIds }, status: { [Op.ne]: 'deleted' } },
-      order: [['updated_at', 'DESC']],
-      limit: 4,
-      raw: true
-    }) : [];
+    const recentDeckRows = allDeckIds.length ? await sequelize.query(`
+      SELECT d.*, c.name AS category_name
+      FROM decks d
+      JOIN categories c ON c.id = d.category_id
+      WHERE d.id IN (:allDeckIds) AND d.status != 'deleted'
+      ORDER BY d.updated_at DESC
+      LIMIT 4
+    `, { replacements: { allDeckIds }, type: QueryTypes.SELECT }) : [];
 
     let recentDecks = [];
     if (recentDeckRows.length) {
       const recentDeckIds = recentDeckRows.map(d => parseInt(d.id));
-
-      const recentCatIds = [...new Set(recentDeckRows.map(d => parseInt(d.category_id)))];
-      const catRows = await Category.findAll({
-        where: { id: { [Op.in]: recentCatIds } },
-        attributes: ['id', 'name'],
-        raw: true
-      });
-      const catMap = Object.fromEntries(catRows.map(c => [parseInt(c.id), c.name]));
 
       const recentCardRows = await Card.findAll({
         where: { deck_id: { [Op.in]: recentDeckIds }, status: 'active' },
@@ -213,7 +206,7 @@ module.exports.index = async (req, res) => {
         return {
           ...deck,
           totalCards, dueToday, progress,
-          category: { name: catMap[parseInt(deck.category_id)] || '' }
+          category: { name: deck.category_name || '' }
         };
       });
     }

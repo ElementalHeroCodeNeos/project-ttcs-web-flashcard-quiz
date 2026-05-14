@@ -1,4 +1,4 @@
-const { Op } = require('sequelize');
+const { QueryTypes } = require('sequelize');
 const sequelize  = require('../../config/database');
 const Deck       = require('../../models/deck.model');
 const Card       = require('../../models/card.model');
@@ -11,80 +11,65 @@ const LIMIT = 9;
 module.exports.index = async (req, res) => {
   try {
     const userId     = res.locals.user ? parseInt(res.locals.user.id) : null;
-    const keyword    = req.query.keyword    || '';
+    const keyword    = req.query.keyword     || '';
     const categoryId = req.query.category_id || '';
     const page       = parseInt(req.query.page) || 1;
 
-    const where = { visibility: 'public', status: 'active' };
-    if (categoryId) where.category_id = parseInt(categoryId);
-    if (keyword)    where.title = { [Op.iLike]: `%${keyword}%` };
+    const conditions   = ["d.visibility = 'public'", "d.status = 'active'"];
+    const replacements = { userId: userId || 0 };
 
-    const total      = await Deck.count({ where });
-    const totalPages = Math.ceil(total / LIMIT) || 1;
+    if (categoryId) {
+      conditions.push('d.category_id = :categoryId');
+      replacements.categoryId = parseInt(categoryId);
+    }
+    if (keyword) {
+      conditions.push('d.title ILIKE :keyword');
+      replacements.keyword = `%${keyword}%`;
+    }
+
+    const where = conditions.join(' AND ');
+
+    const [{ total }] = await sequelize.query(
+      `SELECT COUNT(*) AS total FROM decks d WHERE ${where}`,
+      { replacements, type: QueryTypes.SELECT }
+    );
+
+    const totalRecord = parseInt(total);
+    const totalPages  = Math.ceil(totalRecord / LIMIT) || 1;
     const currentPage = Math.min(page, totalPages);
-    const offset      = (currentPage - 1) * LIMIT;
 
-    const deckRows = await Deck.findAll({
-      where,
-      order: [['published_at', 'DESC']],
-      limit: LIMIT,
-      offset,
+    replacements.limit  = LIMIT;
+    replacements.offset = (currentPage - 1) * LIMIT;
+
+    const decks = await sequelize.query(`
+      SELECT d.*,
+             c.name      AS category_name,
+             u.full_name AS author_name,
+             COUNT(DISTINCT ca.id) AS card_count,
+             EXISTS (
+               SELECT 1 FROM saved_decks sd
+               WHERE sd.deck_id = d.id AND sd.user_id = :userId AND sd.status = 'active'
+             ) AS is_saved
+      FROM decks d
+      JOIN categories c  ON c.id = d.category_id
+      JOIN users u       ON u.id = d.owner_id
+      LEFT JOIN cards ca ON ca.deck_id = d.id AND ca.status = 'active'
+      WHERE ${where}
+      GROUP BY d.id, c.name, u.full_name
+      ORDER BY d.published_at DESC
+      LIMIT :limit OFFSET :offset
+    `, { replacements, type: QueryTypes.SELECT });
+
+    const categories = await Category.findAll({
+      where: { status: 'active' },
+      order: [['position', 'DESC']],
       raw: true
     });
-
-    if (!deckRows.length) {
-      const categories = await Category.findAll({ where: { status: 'active' }, order: [['position', 'DESC']], raw: true });
-      return res.render('client/pages/explore', {
-        title: 'Khám phá — FlashLearn',
-        decks: [], categories, total, limit: LIMIT,
-        page: currentPage, keyword, currentCategory: categoryId
-      });
-    }
-
-    // Lấy tên danh mục
-    const catIds = [...new Set(deckRows.map(d => parseInt(d.category_id)))];
-    const catRows = await Category.findAll({ where: { id: { [Op.in]: catIds } }, attributes: ['id', 'name'], raw: true });
-    const catMap  = Object.fromEntries(catRows.map(c => [parseInt(c.id), c.name]));
-
-    // Lấy tên tác giả
-    const ownerIds = [...new Set(deckRows.map(d => parseInt(d.owner_id)))];
-    const userRows = await User.findAll({ where: { id: { [Op.in]: ownerIds } }, attributes: ['id', 'full_name'], raw: true });
-    const userMap  = Object.fromEntries(userRows.map(u => [parseInt(u.id), u.full_name]));
-
-    // Đếm số thẻ
-    const deckIds = deckRows.map(d => parseInt(d.id));
-    const countRows = await Card.findAll({
-      where: { deck_id: { [Op.in]: deckIds }, status: 'active' },
-      attributes: ['deck_id', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-      group: ['deck_id'],
-      raw: true
-    });
-    const countMap = Object.fromEntries(countRows.map(r => [parseInt(r.deck_id), parseInt(r.count)]));
-
-    // Kiểm tra deck đã lưu
-    const savedSet = new Set();
-    if (userId) {
-      const savedRows = await SavedDeck.findAll({
-        where: { user_id: userId, deck_id: { [Op.in]: deckIds }, status: 'active' },
-        attributes: ['deck_id'],
-        raw: true
-      });
-      savedRows.forEach(r => savedSet.add(parseInt(r.deck_id)));
-    }
-
-    const decks = deckRows.map(d => ({
-      ...d,
-      category_name: catMap[parseInt(d.category_id)] || '',
-      author_name:   userMap[parseInt(d.owner_id)]   || '',
-      card_count:    countMap[parseInt(d.id)]        || 0,
-      is_saved:      savedSet.has(parseInt(d.id))
-    }));
-
-    const categories = await Category.findAll({ where: { status: 'active' }, order: [['position', 'DESC']], raw: true });
 
     res.render('client/pages/explore', {
       title: 'Khám phá — FlashLearn',
-      decks, categories, total, limit: LIMIT,
+      decks, categories,
+      total: totalRecord, limit: LIMIT,
       page: currentPage, keyword, currentCategory: categoryId
     });
   } catch (error) {

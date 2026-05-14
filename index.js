@@ -23,11 +23,11 @@ app.set('view engine', 'pug');
 // File tĩnh
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Parse body
+// Cho phép gửi data lên dạng json
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Cookie parser
+// Parse chuỗi cookie -> object và lưu ở req.cookies
 app.use(cookieParser());
 
 // Routes

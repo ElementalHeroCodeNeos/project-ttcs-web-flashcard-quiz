@@ -366,6 +366,16 @@ a { text-decoration: none; color: inherit; }
   margin-bottom: 20px;
 }
 
+.featured-section .inner-head {
+  position: relative;
+  justify-content: center;
+}
+
+.featured-section .inner-head .inner-link {
+  position: absolute;
+  right: 0;
+}
+
 .featured-section .inner-title {
   font-family: 'Nunito', sans-serif;
   font-size: 20px;

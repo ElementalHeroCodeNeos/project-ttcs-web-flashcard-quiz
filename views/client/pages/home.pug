@@ -34,8 +34,8 @@ block main
       .inner-wrap
         .inner-head
           h2.inner-title
-          i.fa-solid.fa-fire.icon-fire
-          |  Bộ thẻ nổi bật
+            i.fa-solid.fa-fire.icon-fire
+            |  Bộ thẻ nổi bật
           a.inner-link(href="/explore") Xem tất cả →
         .inner-body
           if featuredDecks && featuredDecks.length
@@ -45,16 +45,16 @@ block main
                 .deck-card
                   .deck-accent(class=`cat-${colorIdx}`)
                   .deck-top
-                    span.badge(class=`cat-${colorIdx}`) #{deck.category.name}
+                    span.badge(class=`cat-${colorIdx}`) #{deck.category_name}
                   .deck-name #{deck.title}
                   .deck-desc #{deck.description || ''}
                   .deck-meta
                     .deck-author
-                      .author-avatar #{deck.owner.full_name.charAt(0).toUpperCase()}
-                      span #{deck.owner.full_name}
+                      .author-avatar #{deck.author_name.charAt(0).toUpperCase()}
+                      span #{deck.author_name}
                     span
                       i.fa-regular.fa-clone.icon-clone
-                      |  #{deck.cardCount} thẻ
+                      |  #{deck.card_count} thẻ
                   a.btn-save(href=`/explore/${deck.id}`) Xem bộ thẻ
           else
             p.no-decks Chưa có bộ thẻ nào.
