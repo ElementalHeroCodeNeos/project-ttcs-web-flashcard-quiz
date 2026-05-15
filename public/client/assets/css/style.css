@@ -899,6 +899,8 @@ a { text-decoration: none; color: inherit; }
   padding: 2px 8px;
   border-radius: 6px;
 }
+.due-count-dot { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 50%; background: #fef08a; color: #ef4444; font-size: 10px; font-weight: 700; border: 1.5px solid #fde047; line-height: 1; }
+.deck-top-right { display: flex; align-items: center; gap: 6px; }
 
 .deck-bar {
   height: 4px;
@@ -1065,6 +1067,7 @@ a { text-decoration: none; color: inherit; }
 .type-created { background: #ecfdf5; color: #10b981; }
 .type-saved   { background: #eff6ff; color: #3b82f6; }
 
+.deck-author { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
 .deck-meta-row {
   display: flex;
   align-items: center;
@@ -1158,6 +1161,9 @@ a { text-decoration: none; color: inherit; }
 
 .btn-toggle { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1.5px solid var(--border); background: transparent; color: var(--muted); transition: all 0.15s; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
 .btn-toggle:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.btn-unsave { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1.5px solid var(--border); background: transparent; color: var(--muted); transition: all 0.15s; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.btn-unsave:hover { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
+.btn-unsave:disabled { opacity: 0.6; cursor: default; }
 
 .btn-study  { background: var(--accent); color: white; }
 .btn-study:hover  { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(92,110,248,0.3); }
@@ -1165,6 +1171,9 @@ a { text-decoration: none; color: inherit; }
 .btn-choice:hover { background: var(--accent3); color: white; }
 .btn-match  { background: var(--accent2-light); color: var(--accent2); border: 1.5px solid transparent; }
 .btn-match:hover  { background: var(--accent2); color: white; }
+.btn-review { background: #fffbeb; color: #d97706; border: 1.5px solid transparent; }
+.btn-review:hover { background: #d97706; color: white; }
+.due-count-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #ef4444; color: white; font-size: 10px; font-weight: 700; line-height: 1; }
 
 .add-card-section { background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 20px 24px; margin-bottom: 20px; }
 .section-title { font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 800; margin-bottom: 16px; }
@@ -1492,6 +1501,9 @@ body.study-mode { background: var(--accent-light); }
 .study-done { text-align: center; padding: 60px 0; }
 .study-done-title { font-family: 'Nunito', sans-serif; font-size: 28px; font-weight: 900; margin-bottom: 8px; }
 .study-done-desc { font-size: 15px; color: var(--muted); margin-bottom: 24px; }
+.study-empty { text-align: center; padding: 64px 24px; }
+.study-empty-title { font-family: 'Nunito', sans-serif; font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+.study-empty-desc { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
 
 /* ===== QUIZ CHOICE ===== */
 .question-card { background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 36px 40px; margin-bottom: 16px; text-align: center; }

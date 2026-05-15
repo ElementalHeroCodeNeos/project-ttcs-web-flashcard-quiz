@@ -89,6 +89,39 @@ module.exports.study = async (req, res) => {
   }
 };
 
+// Ôn tập thẻ đến hạn của một bộ thẻ cụ thể
+module.exports.studyDeckDue = async (req, res) => {
+  try {
+    const userId = parseInt(req.user.id);
+    const deckId = parseInt(req.params.id);
+
+    const deck = await Deck.findOne({
+      where: { id: deckId, status: { [Op.ne]: 'deleted' } },
+      raw: true
+    });
+    if (!deck) return res.redirect('/deck');
+
+    const isOwner = parseInt(deck.owner_id) === userId;
+    if (!isOwner) {
+      const saved = await SavedDeck.findOne({
+        where: { user_id: userId, deck_id: deckId, status: 'active' }
+      });
+      if (!saved) return res.redirect('/deck');
+    }
+
+    const cards = await getDueCards(userId, [deckId]);
+
+    res.render('client/pages/study', {
+      title: `${deck.title} — Ôn tập — FlashLearn`,
+      currentPage: 'deck',
+      deck,
+      cards
+    });
+  } catch (error) {
+    res.redirect('/deck');
+  }
+};
+
 // Ôn tập tất cả thẻ đến hạn hôm nay trong toàn bộ deck của user
 module.exports.studyDue = async (req, res) => {
   try {

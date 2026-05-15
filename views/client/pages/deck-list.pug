@@ -21,18 +21,21 @@ block main
           value=query.search || ''
         )
       .filter-divider
-      select.filter-select(name="category_id")
+      select.filter-select(name="category_id", onchange="this.form.submit()")
         option(value="") Danh mục
         each cat in categories
           option(value=cat.id, selected=query.category_id == cat.id) #{cat.name}
-      select.filter-select(name="visibility")
+      select.filter-select(name="visibility", onchange="this.form.submit()")
         option(value="") Trạng thái
         option(value="public",  selected=query.visibility === 'public')  Công khai
         option(value="private", selected=query.visibility === 'private') Riêng tư
-      select.filter-select(name="type")
+      select.filter-select(name="type", onchange="this.form.submit()")
         option(value="",        selected=!query.type || query.type === '') Tất cả
         option(value="created", selected=query.type === 'created') Đã tạo
         option(value="saved",   selected=query.type === 'saved')   Đã lưu
+      select.filter-select(name="due", onchange="this.form.submit()")
+        option(value="",  selected=query.due !== '1') Tất cả thẻ
+        option(value="1", selected=query.due === '1') Có thẻ đến hạn
       .filter-divider
       button.btn-clear(type="button", onclick="window.location='/deck'")
         i.fa-solid.fa-xmark
@@ -54,7 +57,10 @@ block main
             .deck-accent(class=`cat-${colorIdx}`)
             .deck-top
               span.badge(class=`cat-${colorIdx}`) #{deck.category ? deck.category.name : 'Chung'}
-              span.type-badge(class=isOwner ? 'type-created' : 'type-saved') #{isOwner ? 'Đã tạo' : 'Đã lưu'}
+              .deck-top-right
+                span.type-badge(class=isOwner ? 'type-created' : 'type-saved') #{isOwner ? 'Đã tạo' : 'Đã lưu'}
+                if deck.dueCount > 0
+                  span.due-count-dot #{deck.dueCount}
             .deck-name #{deck.title}
             .deck-desc #{deck.description || ''}
             .deck-meta-row
@@ -69,6 +75,10 @@ block main
                 span.status-badge.status-private
                   i.fa-solid.fa-lock.icon-lock
                   |  Riêng tư
+              if !isOwner
+                span.deck-author
+                  i.fa-regular.fa-user
+                  |  #{deck.ownerName}
             .deck-actions
               a.btn-action.primary(href=`/deck/detail/${deck.id}`) Chi tiết
               if isOwner

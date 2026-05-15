@@ -18,9 +18,12 @@ router.post('/:id/card',        cardController.createPost);
 router.patch('/:id/card/:cid',  cardController.editPatch);
 router.delete('/:id/card/:cid', cardController.deleteDelete);
 
-router.post('/:id/save', deckController.savePost);
+router.patch('/:id/visibility', deckController.visibilityPatch);
+router.post('/:id/save',   deckController.savePost);
+router.delete('/:id/save', deckController.unsaveDelete);
 
 router.get('/study/:id',        studyController.study);
+router.get('/due/:id',          studyController.studyDeckDue);
 
 router.get('/quiz/choice/:id',  quizController.choice);
 router.post('/quiz/choice/:id', quizController.choiceSubmit);

@@ -17,7 +17,7 @@ const SAVED_EXISTS = `EXISTS (
 module.exports.list = async (req, res) => {
   try {
     const userId = parseInt(req.user.id);
-    const { search = '', category_id = '', visibility = '', type = '' } = req.query;
+    const { search = '', category_id = '', visibility = '', type = '', due = '' } = req.query;
     const page = parseInt(req.query.page) || 1;
 
     // Build điều kiện WHERE theo loại xem (tất cả / tự tạo / đã lưu)
@@ -44,6 +44,14 @@ module.exports.list = async (req, res) => {
       conditions.push('d.title ILIKE :search');
       replacements.search = `%${search}%`;
     }
+    if (due === '1') {
+      conditions.push(`(
+        SELECT COUNT(*) FROM cards c2
+        LEFT JOIN study_progress cp2 ON cp2.card_id = c2.id AND cp2.user_id = :userId
+        WHERE c2.deck_id = d.id AND c2.status = 'active'
+          AND (cp2.id IS NULL OR cp2.due_date <= CURRENT_DATE)
+      ) > 0`);
+    }
 
     const where = conditions.join(' AND ');
 
@@ -60,29 +68,39 @@ module.exports.list = async (req, res) => {
     replacements.limit  = LIMIT;
     replacements.offset = (currentPage - 1) * LIMIT;
 
-    // Lấy deck kèm tên danh mục, số thẻ, trạng thái owner và đã lưu
+    // Lấy deck kèm tên danh mục, số thẻ, trạng thái owner, đã lưu, và số thẻ đến hạn
     const deckRows = await sequelize.query(`
       SELECT d.*,
              c.name AS category_name,
+             u.full_name AS owner_name,
              COUNT(DISTINCT ca.id) AS card_count,
              (d.owner_id = :userId) AS is_owner,
-             ${SAVED_EXISTS} AS is_saved
+             ${SAVED_EXISTS} AS is_saved,
+             (
+               SELECT COUNT(*) FROM cards c2
+               LEFT JOIN study_progress cp2 ON cp2.card_id = c2.id AND cp2.user_id = :userId
+               WHERE c2.deck_id = d.id AND c2.status = 'active'
+                 AND (cp2.id IS NULL OR cp2.due_date <= CURRENT_DATE)
+             ) AS due_count
       FROM decks d
       JOIN categories c  ON c.id = d.category_id
+      JOIN users u       ON u.id = d.owner_id
       LEFT JOIN cards ca ON ca.deck_id = d.id AND ca.status = 'active'
       WHERE ${where}
-      GROUP BY d.id, c.name
+      GROUP BY d.id, c.name, u.full_name
       ORDER BY d.created_at DESC
       LIMIT :limit OFFSET :offset
     `, { replacements, type: QueryTypes.SELECT });
 
-    // Reshape để Pug dùng deck.category.name, deck.cardCount, deck.isOwner, deck.isSaved
+    // Reshape để Pug dùng deck.category.name, deck.cardCount, deck.isOwner, deck.isSaved, deck.dueCount
     const decks = deckRows.map(d => ({
       ...d,
       category:  { name: d.category_name },
+      ownerName: d.owner_name,
       cardCount: parseInt(d.card_count),
       isOwner:   d.is_owner,
-      isSaved:   d.is_saved
+      isSaved:   d.is_saved,
+      dueCount:  parseInt(d.due_count)
     }));
 
     // Danh sách danh mục cho bộ lọc
@@ -257,16 +275,68 @@ module.exports.detail = async (req, res) => {
       isSaved = saved !== null;
     }
 
+    const today = new Date().toISOString().slice(0, 10);
+    const [dueRow] = await sequelize.query(`
+      SELECT COUNT(*) AS due_count
+      FROM cards c
+      LEFT JOIN study_progress cp ON cp.card_id = c.id AND cp.user_id = :userId
+      WHERE c.deck_id = :deckId AND c.status = 'active'
+        AND (cp.id IS NULL OR cp.due_date <= :today)
+    `, { replacements: { userId, deckId: deck.id, today }, type: QueryTypes.SELECT });
+
     res.render('client/pages/deck-detail', {
       title: `${deck.title} — FlashLearn`,
       currentPage: 'deck',
       deck: { ...deck, category, cardCount: cards.length },
       cards,
       isOwner,
-      isSaved
+      isSaved,
+      dueCount: parseInt(dueRow.due_count)
     });
   } catch (error) {
     res.redirect('/deck');
+  }
+};
+
+// Chuyển đổi public/private cho bộ thẻ (chỉ owner)
+module.exports.visibilityPatch = async (req, res) => {
+  try {
+    const userId = parseInt(req.user.id);
+    const { visibility } = req.body;
+    if (!['public', 'private'].includes(visibility)) return res.json({ code: 'error' });
+
+    const deck = await Deck.findOne({
+      where: { id: req.params.id, owner_id: userId, status: { [Op.ne]: 'deleted' } }
+    });
+    if (!deck) return res.json({ code: 'error' });
+
+    await deck.update({
+      visibility,
+      published_at: visibility === 'public' && deck.visibility === 'private' ? new Date() : deck.published_at,
+      updated_at: new Date()
+    });
+
+    res.json({ code: 'success' });
+  } catch (error) {
+    res.json({ code: 'error' });
+  }
+};
+
+// Bỏ lưu bộ thẻ khỏi thư viện cá nhân
+module.exports.unsaveDelete = async (req, res) => {
+  try {
+    const userId = parseInt(req.user.id);
+    const deckId = parseInt(req.params.id);
+
+    const saved = await SavedDeck.findOne({
+      where: { user_id: userId, deck_id: deckId, status: 'active' }
+    });
+    if (!saved) return res.json({ code: 'error', message: 'Không tìm thấy trong thư viện!' });
+
+    await saved.update({ status: 'removed', removed_at: new Date() });
+    res.json({ code: 'success' });
+  } catch (error) {
+    res.json({ code: 'error', message: 'Bỏ lưu thất bại!' });
   }
 };
 

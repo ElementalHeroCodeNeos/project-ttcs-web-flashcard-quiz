@@ -35,7 +35,17 @@ block main
               else
                 i.fa-solid.fa-globe
                 |  Công khai bộ thẻ
+        else if isSaved
+          .deck-info-right
+            button.btn-unsave
+              i.fa-solid.fa-bookmark-slash
+              |  Bỏ lưu
       .deck-actions
+        a.btn-action.btn-review(href=`/deck/due/${deck.id}`)
+          i.fa-solid.fa-rotate-right
+          |  Ôn tập
+          if dueCount > 0
+            span.due-count-btn #{dueCount}
         a.btn-action.btn-study(href=`/deck/study/${deck.id}`)
           i.fa-solid.fa-bolt
           |  Học thẻ
@@ -99,6 +109,18 @@ block main
           button.btn-delete(onclick="confirmDelete()") Xóa
 
 block scripts
+  if isSaved
+    script.
+      document.querySelector('.btn-unsave').addEventListener('click', function() {
+        const btn = this;
+        btn.disabled = true;
+        fetch('/deck/!{deck.id}/save', { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.code !== 'success') { btn.disabled = false; return; }
+          window.location.href = '/deck';
+        });
+      });
   if isOwner
     script.
       const DECK_ID = !{deck.id};
@@ -213,3 +235,28 @@ block scripts
           hideDelete();
         });
       }
+
+      document.querySelector('.btn-toggle').addEventListener('click', function() {
+        const btn = this;
+        const cur = btn.dataset.visibility;
+        const next = cur === 'public' ? 'private' : 'public';
+        fetch('/deck/' + DECK_ID + '/visibility', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ visibility: next })
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.code !== 'success') return;
+          btn.dataset.visibility = next;
+          if (next === 'public') {
+            btn.innerHTML = '<i class="fa-solid fa-lock"></i> Đặt riêng tư';
+            document.querySelector('.status-badge').className = 'status-badge status-public';
+            document.querySelector('.status-badge').innerHTML = '<i class="fa-solid fa-globe icon-globe"></i> Công khai';
+          } else {
+            btn.innerHTML = '<i class="fa-solid fa-globe"></i> Công khai bộ thẻ';
+            document.querySelector('.status-badge').className = 'status-badge status-private';
+            document.querySelector('.status-badge').innerHTML = '<i class="fa-solid fa-lock icon-lock"></i> Riêng tư';
+          }
+        });
+      });
