@@ -27,9 +27,9 @@ module.exports.list = async (req, res) => {
     if (type === 'created') {
       conditions.push('d.owner_id = :userId');
     } else if (type === 'saved') {
-      conditions.push(SAVED_EXISTS);
+      conditions.push(`${SAVED_EXISTS} AND d.visibility = 'public'`);
     } else {
-      conditions.push(`(d.owner_id = :userId OR ${SAVED_EXISTS})`);
+      conditions.push(`(d.owner_id = :userId OR (${SAVED_EXISTS} AND d.visibility = 'public'))`);
     }
 
     if (category_id) {
